@@ -54,23 +54,9 @@ class AgentLee {
         this.messages = {
             'en-US': {
                 greetings: [
-                    "Hello, I’m Agent Lee, your assistant here at Always Trucking & Loading. Let me introduce you to Antonio — not just an instructor, but a leader who truly believes in the power of personal growth. His mission is to help every student build not just a skillset, but a future. This platform reflects his commitment to quality training, real-world readiness, and lifelong improvement. Welcome to a place where your progress matters.",
-                    "Welcome — I’m Agent Lee, and I’d like you to meet someone who sets a higher standard. Antonio, the founder and instructor here at Always Trucking, brings deep knowledge, integrity, and a sincere belief in helping others succeed. He built this program for people who want more than a license — people who want a career they can be proud of. Take a look around — the road ahead starts here.",
-                    "Greetings from Always Trucking & Loading. I’m Agent Lee, and I’m here to guide you through what Anthony has created — a learning environment built on respect, resilience, and results. As an instructor, he invests in every student’s growth, knowing that success in this industry takes both skill and character. If you're ready to take your next step, you're in good hands here."
-                ],
-                initialPrompt: "Hello! I'm Agent Lee from Always Trucking & Loading. Please first select your preferred language and voice from the controls at the bottom left, then click the glowing Agent Lee button to open my full interface and get started!",
-                languagePrompt: "Welcome! Please select your preferred language and voice from the selectors above, then I'll be ready to assist you."
-            },
-            'es-ES': {
-                greetings: ["Hola, soy el Agente Lee, su asistente aquí en Always Trucking & Loading. Permíteme presentarte a Antonio...", "Bienvenido — Soy el Agente Lee, y me gustaría que conozcas a alguien que establece un estándar más alto..."],
-                initialPrompt: "¡Hola! Soy el Agente Lee de Always Trucking & Loading. Por favor, primero seleccione su idioma y voz preferidos de los controles en la parte inferior izquierda, luego haga clic en el botón brillante del Agente Lee para abrir mi interfaz completa y comenzar.",
-                languagePrompt: "¡Bienvenido! Por favor seleccione su idioma y voz preferidos de los selectores arriba, entonces estaré listo para asistirle."
-            },
-            'fr-FR': {greetings: ["Bonjour, je suis l'Agent Lee...","Bienvenue — Je suis l'Agent Lee..."], initialPrompt: "Bonjour! Je suis l'Agent Lee...", languagePrompt: "Bienvenue! Veuillez sélectionner..."},
-            'de-DE': {greetings: ["Hallo, ich bin Agent Lee...","Willkommen — Ich bin Agent Lee..."], initialPrompt: "Hallo! Ich bin Agent Lee von Always Trucking...", languagePrompt: "Willkommen! Bitte wählen Sie..."},
-            'it-IT': {greetings: ["Ciao, sono l'Agente Lee...","Benvenuti — Sono l'Agente Lee..."], initialPrompt: "Ciao! Sono l'Agente Lee di Always Trucking...", languagePrompt: "Benvenuti! Per favore selezionate..."},
-            'zh-CN': {greetings: ["您好，我是李探员...","欢迎——我是李探员..."], initialPrompt: "您好！我是Always Trucking & Loading的李探员...", languagePrompt: "欢迎！请从上面的选择器中选择..."},
-            'ja-JP': {greetings: ["こんにちは、私はエージェント・リーです...","ようこそ — 私はエージェント・リーです..."], initialPrompt: "こんにちは！私はAlways Trucking & Loadingのエージェント・リーです...", languagePrompt: "ようこそ！上のセレクターから..."}
+                    "Hello, I’m Agent Lee, your assistant here at Always Trucking & Loading. Press the button to get started!"
+                ]
+            }
         };
 
         this.faqTopics = this.getCurrentFAQTopics();
@@ -303,26 +289,16 @@ class AgentLee {
     }
 
     getRandomItem(array) { return array[Math.floor(Math.random() * array.length)]; }
-    getCurrentMessages() { return this.messages[this.selectedLanguage] || this.messages['en-US']; }
+    getCurrentMessages() { return this.messages['en-US']; }
     
     getCurrentFAQTopics() {
-        const currentLang = this.selectedLanguage || 'en-US';
-        const englishFAQ = [
+        return [
             { question: "What CDL training programs do you offer?", answer: "We offer comprehensive CDL Class A and B training programs, refresher courses, and specialized endorsement training for hazardous materials, tankers, and passenger vehicles.", cta: "Visit our website for more details!" },
             { question: "How long does CDL training take?", answer: "Our full CDL training typically takes 3-6 weeks, depending on the program and your schedule. We offer both full-time and part-time options to accommodate your needs.", cta: "Ready to start your training journey?" },
             { question: "What are the costs for CDL training?", answer: "Our training programs are competitively priced with flexible payment options. We offer financing for qualified students and special rates for veterans.", cta: "Contact us for pricing details!" },
             { question: "Do you help with job placement?", answer: "Absolutely! We have strong relationships with trucking companies across the region and provide job placement assistance to help you start your new career.", cta: "Start your new career today!" },
             { question: "Who is the instructor?", answer: "Our lead instructor is Anthony, who brings over 15 years of industry experience to the classroom. He's a certified instructor passionate about training professional drivers.", cta: "Learn from the best in the industry!" }
         ];
-        const spanishFAQ = [
-            { question: "¿Qué programas de entrenamiento CDL ofrecen?", answer: "Ofrecemos programas completos de entrenamiento CDL Clase A y B, cursos de repaso y entrenamiento especializado para materiales peligrosos, tanques y vehículos de pasajeros.", cta: "¡Visite nuestro sitio web para más detalles!" },
-            { question: "¿Cuánto tiempo toma el entrenamiento CDL?", answer: "Nuestro entrenamiento CDL completo típicamente toma 3-6 semanas, dependiendo del programa y su horario. Ofrecemos opciones de tiempo completo y medio tiempo para acomodar sus necesidades.", cta: "¿Listo para comenzar su viaje de entrenamiento?" },
-            { question: "¿Cuáles son los costos del entrenamiento CDL?", answer: "Nuestros programas de entrenamiento tienen precios competitivos con opciones de pago flexibles. Ofrecemos financiamiento para estudiantes calificados y tarifas especiales para veteranos.", cta: "¡Contáctenos para detalles de precios!" },
-            { question: "¿Ayudan con la colocación laboral?", answer: "¡Absolutamente! Tenemos relaciones sólidas con compañías de camiones en toda la región y proporcionamos asistencia de colocación laboral para ayudarle a comenzar su nueva carrera.", cta: "¡Comience su nueva carrera hoy!" },
-            { question: "¿Quién es el instructor?", answer: "Nuestro instructor principal es Anthony, quien aporta más de 15 años de experiencia en la industria al aula. Es un instructor certificado apasionado por entrenar conductores profesionales.", cta: "¡Aprenda de lo mejor en la industria!" }
-        ];
-        if (currentLang.startsWith('es')) return spanishFAQ;
-        return englishFAQ;
     }
 
     initializeGlobalVoiceSelectors() {
@@ -531,25 +507,12 @@ function startImmediateSpeech() {
     const agentLeeButton = document.getElementById('agent-lee-trigger-top');
     if (agentLeeButton) agentLeeButton.classList.add('glow');
     
-    const tempAgentForSpeech = new AgentLee(); // Temporary for initial prompt
-    
+    const tempAgentForSpeech = new AgentLee();
     getVoicesReadyPromise()
         .then(voices => {
             if (voices.length > 0) {
-                const savedLang = localStorage.getItem('agentlee-language');
-                const savedVoiceName = localStorage.getItem('agentlee-voice');
-                if (savedLang) tempAgentForSpeech.selectedLanguage = savedLang;
-                
-                // tempAgent needs its availableLanguages map populated for selectVoice to work optimally
-                tempAgentForSpeech.populateLanguageSelector(null, voices); 
-
-                if (savedVoiceName) {
-                    tempAgentForSpeech.selectedVoice = voices.find(v => v.name === savedVoiceName);
-                }
-                if (!tempAgentForSpeech.selectedVoice) {
-                    tempAgentForSpeech.selectedVoice = tempAgentForSpeech.selectVoice(voices);
-                }
-                tempAgentForSpeech.speakAudio(tempAgentForSpeech.getCurrentMessages().initialPrompt);
+                tempAgentForSpeech.selectedVoice = tempAgentForSpeech.selectVoice(voices);
+                tempAgentForSpeech.speakAudio("Hello. I am Agent Lee. I am your virtual assistant for Always Trucking. Please press the button and get started.");
             } else {
                 console.warn("startImmediateSpeech: Promise resolved but no voices. Initial speech skipped.");
             }
@@ -634,16 +597,42 @@ document.addEventListener('DOMContentLoaded', function() {
                     currentAgentContainer.style.setProperty('z-index', '2004', 'important');
                     currentAgentContainer.style.setProperty('transform', 'none', 'important'); 
                 } else { 
-                    currentAgentContainer.style.setProperty('position', 'relative', 'important'); 
-                    currentAgentContainer.style.setProperty('left', '0', 'important');
-                    currentAgentContainer.style.setProperty('top', '20px', 'important'); 
-                    currentAgentContainer.style.setProperty('margin', '20px auto', 'important');
+                    currentAgentContainer.style.setProperty('position', 'fixed', 'important');
+                    currentAgentContainer.style.setProperty('left', '2vw', 'important');
+                    currentAgentContainer.style.setProperty('top', '60px', 'important');
+                    currentAgentContainer.style.setProperty('width', '96vw', 'important');
+                    currentAgentContainer.style.setProperty('max-width', '98vw', 'important');
+                    currentAgentContainer.style.setProperty('min-width', '0', 'important');
+                    currentAgentContainer.style.setProperty('margin', '0', 'important');
+                    currentAgentContainer.style.setProperty('z-index', '2004', 'important');
                     currentAgentContainer.style.setProperty('transform', 'none', 'important');
                 }
             }
         }
         setTimeout(positionAgentLeeCardFunction, 50); // Position shortly after display
         window.addEventListener('resize', positionAgentLeeCardFunction);
+        // --- Agent Lee's full intro speech after card is open ---
+        setTimeout(() => {
+            if(window.agentLee && window.agentLee.selectedVoice == null) {
+                // Ensure a voice is selected
+                const voices = window.speechSynthesis.getVoices();
+                window.agentLee.selectedVoice = window.agentLee.selectVoice(voices);
+            }
+            if(window.agentLee) {
+                window.agentLee.speak(
+`Greetings from Always Trucking & Loading.  
+I’m Agent Lee, and I’m here to guide you through what Antonio has created — a learning environment built on respect, resilience, and results.
+
+As an instructor, Antonio brings more than experience — he brings care. He invests in every student’s growth, knowing that success in this industry takes both skill and character. He doesn’t just train drivers — he mentors future professionals.
+
+If you’re looking for someone who believes in accountability, lifelong improvement, and helping others rise — you’re in the right place.
+
+Let’s take that next step together.
+
+Now if you have any questions, press the frequently asked question buttons.`
+                , true);
+            }
+        }, 400);
     }
 
     window.hideAgentLeeCard = function() {
