@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        select, button {
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 16px;
+            border-radius: 5px;
+            border: 2px solid #e74c3c;
+            width: 100%;
+        }
+        button {
+            background: #e74c3c;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #c0392b;
+        }
+        .voice-info {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Voice Selection Test</h1>
+        
+        <label for="lang-test">Language:</label>
+        <select id="lang-test"></select>
+        
+        <label for="voice-test">Voice:</label>
+        <select id="voice-test"></select>
+        
+        <button onclick="testVoice()">Test Voice</button>
+        <button onclick="showAllVoices()">Show All Voices</button>
+        
+        <div id="voice-info" class="voice-info"></div>
+    </div>
+
+    <script>
+        let availableLanguages = new Map();
+        let selectedVoice = null;
+
+        function initVoices() {
+            const voices = speechSynthesis.getVoices();
+            console.log('Total voices:', voices.length);
+            
+            // Group by language
+            availableLanguages.clear();
+            voices.forEach(voice => {
+                const lang = voice.lang;
+                if (!availableLanguages.has(lang)) {
+                    availableLanguages.set(lang, []);
+                }
+                availableLanguages.get(lang).push(voice);
+            });
+
+            populateLanguages();
+        }
+
+        function populateLanguages() {
+            const langSelect = document.getElementById('lang-test');
+            langSelect.innerHTML = '<option value="">Select Language</option>';
+            
+            const sortedLangs = Array.from(availableLanguages.keys()).sort((a, b) => {
+                if (a.startsWith('en-')) return -1;
+                if (b.startsWith('en-')) return 1;
+                return a.localeCompare(b);
+            });
+
+            sortedLangs.forEach(lang => {
+                const option = document.createElement('option');
+                option.value = lang;
+                option.textContent = `${lang} (${availableLanguages.get(lang).length} voices)`;
+                langSelect.appendChild(option);
+            });
+        }
+
+        function populateVoices(selectedLang) {
+            const voiceSelect = document.getElementById('voice-test');
+            voiceSelect.innerHTML = '<option value="">Select Voice</option>';
+            
+            if (!selectedLang || !availableLanguages.has(selectedLang)) return;
+
+            const voices = availableLanguages.get(selectedLang);
+            const maleVoices = filterMaleVoices(voices);
+
+            maleVoices.forEach(voice => {
+                const option = document.createElement('option');
+                option.value = voice.name;
+                option.textContent = `${voice.name} ${voice.gender || ''}`;
+                voiceSelect.appendChild(option);
+            });
+        }
+
+        function filterMaleVoices(voices) {
+            const maleKeywords = ['male', 'man', 'david', 'mark', 'alex', 'daniel', 'james', 'thomas', 'aaron', 'arthur'];
+            
+            return voices.filter(voice => {
+                const name = voice.name.toLowerCase();
+                const isLikelyMale = maleKeywords.some(keyword => name.includes(keyword)) ||
+                                   (!name.includes('female') && !name.includes('woman') &&
+                                    !name.includes('zira') && !name.includes('cortana') &&
+                                    !name.includes('samantha') && !name.includes('susan') &&
+                                    !name.includes('karen') && !name.includes('hazel'));
+                return isLikelyMale;
+            });
+        }
+
+        function testVoice() {
+            if (selectedVoice) {
+                const utterance = new SpeechSynthesisUtterance("Hello! I'm Agent Lee, ready to help you with Always Trucking & Loading.");
+                utterance.voice = selectedVoice;
+                speechSynthesis.speak(utterance);
+            } else {
+                alert('Please select a voice first');
+            }
+        }
+
+        function showAllVoices() {
+            const voices = speechSynthesis.getVoices();
+            const info = document.getElementById('voice-info');
+            let html = '<h3>All Available Voices:</h3>';
+            
+            voices.forEach((voice, index) => {
+                html += `<div>${index}: ${voice.name} (${voice.lang}) - ${voice.gender || 'unknown gender'}</div>`;
+            });
+            
+            info.innerHTML = html;
+        }
+
+        // Event listeners
+        document.getElementById('lang-test').addEventListener('change', function() {
+            const selectedLang = this.value;
+            populateVoices(selectedLang);
+        });
+
+        document.getElementById('voice-test').addEventListener('change', function() {
+            const voiceName = this.value;
+            const voices = speechSynthesis.getVoices();
+            selectedVoice = voices.find(voice => voice.name === voiceName);
+            console.log('Selected voice:', selectedVoice);
+        });
+
+        // Initialize
+        if (speechSynthesis.getVoices().length > 0) {
+            initVoices();
+        } else {
+            speechSynthesis.onvoiceschanged = initVoices;
+        }
+    </script>
+</body>
+</html>

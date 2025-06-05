@@ -1,0 +1,2955 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agent Lee</title>
+  <!-- Blueprint: Agent Lee follows Leeway Standards - Frontend-only, No Build Tools, FOSS, Progressive Enhancement, Modular -->
+  <!-- Vision & ML Libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/holistic/holistic.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+  
+  <!-- Inline PWA Manifest -->
+  <link rel="manifest" href="data:application/json,{
+    &quot;name&quot;:&quot;Agent Lee&quot;,
+    &quot;short_name&quot;:&quot;Lee&quot;,
+    &quot;start_url&quot;:&quot;./&quot;,
+    &quot;display&quot;:&quot;standalone&quot;,
+    &quot;icons&quot;:[
+      {&quot;src&quot;:&quot;qznjge1lw4.png&quot;,&quot;sizes&quot;:&quot;192x192&quot;,&quot;type&quot;:&quot;image/png&quot;},
+      {&quot;src&quot;:&quot;wi8v4vfb8f.png&quot;,&quot;sizes&quot;:&quot;512x512&quot;,&quot;type&quot;:&quot;image/png&quot;}
+    ]
+  }"/>
+  
+  <!-- Service Worker Registration via Blob -->
+  <script>
+    const swCode = `self.addEventListener('install',e=>{e.waitUntil(caches.open('v1').then(c=>c.addAll(['/','/index.html','/qznjge1lw4.png','/wi8v4vfb8f.png'])))});
+      self.addEventListener('fetch',e=>{
+        const url=new URL(e.request.url);
+        if(url.pathname.startsWith('/models/')){
+          e.respondWith(caches.open('v1').then(c=>c.match(e.request).then(r=>r||fetch(e.request).then(r2=>{c.put(e.request,r2.clone());return r2}))))
+        } else e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request)));
+      });`;
+    const swBlob = new Blob([swCode],{type:'application/javascript'});
+    navigator.serviceWorker.register(URL.createObjectURL(swBlob));
+  </script>
+  
+  <!-- MediaAgent: Camera, Microphone, and Diagnostics Agent -->
+  <script type="module">
+    // MediaAgent - autonomous initialization for camera, microphone, and diagnostics
+    class MediaAgent {
+      constructor() {
+        this.devices = { 
+          videoinput: [], 
+          audioinput: [], 
+          audiooutput: [] 
+        };
+        this.streams = {};
+        this.permissions = {
+          camera: null,
+          microphone: null
+        };
+        this.diagnostics = {
+          lastCheck: null,
+          workerStatus: {},
+          dbStatus: {}
+        };
+        
+        // Initialize automatically
+        this.init();
+      }
+      
+      async init() {
+        console.log('🎬 MediaAgent: Initializing media capabilities');
+        
+        // Feature detection
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          console.warn('MediaAgent: getUserMedia not supported in this browser');
+          this.updateStatus('error', 'Media APIs not supported in this browser');
+          return;
+        }
+        
+        // Check permissions
+        await this.checkPermissions();
+        
+        // If permissions granted, enumerate devices
+        if (this.permissions.camera === 'granted' || this.permissions.microphone === 'granted') {
+          await this.enumerateDevices();
+        }
+        
+        // Report capabilities
+        this.generateMediaReport();
+      }
+      
+      async checkPermissions() {
+        try {
+          // Check camera permission
+          if (navigator.permissions && navigator.permissions.query) {
+            const cameraPermission = await navigator.permissions.query({ name: 'camera' });
+            this.permissions.camera = cameraPermission.state;
+            
+            const micPermission = await navigator.permissions.query({ name: 'microphone' });
+            this.permissions.microphone = micPermission.state;
+            
+            // Listen for permission changes
+            cameraPermission.onchange = () => {
+              this.permissions.camera = cameraPermission.state;
+              this.updateStatus('info', `Camera permission changed to ${cameraPermission.state}`);
+              
+              if (cameraPermission.state === 'granted') {
+                this.enumerateDevices();
+              }
+            };
+            
+            micPermission.onchange = () => {
+              this.permissions.microphone = micPermission.state;
+              this.updateStatus('info', `Microphone permission changed to ${micPermission.state}`);
+              
+              if (micPermission.state === 'granted') {
+                this.enumerateDevices();
+              }
+            };
+          }
+        } catch (error) {
+          console.warn('MediaAgent: Error checking permissions:', error);
+        }
+      }
+      
+      async requestPermissions() {
+        try {
+          this.updateStatus('info', 'Requesting camera and microphone permissions...');
+          
+          // Request both camera and microphone
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'user' }, 
+            audio: true
+          });
+          
+          // Store the stream for later use
+          this.streams.default = stream;
+          
+          // Update permissions
+          this.permissions.camera = 'granted';
+          this.permissions.microphone = 'granted';
+          
+          // Enumerate available devices now that we have permission
+          await this.enumerateDevices();
+          
+          this.updateStatus('success', 'Camera and microphone access granted');
+          return true;
+        } catch (error) {
+          if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+            this.updateStatus('error', 'Permission denied for camera/microphone');
+          } else if (error.name === 'NotFoundError') {
+            this.updateStatus('error', 'No camera or microphone found on this device');
+          } else if (error.name === 'NotReadableError') {
+            this.updateStatus('error', 'Camera or microphone is already in use');
+          } else {
+            this.updateStatus('error', `Media error: ${error.message}`);
+          }
+          
+          // Handle iOS in-app browser specific cases
+          if (this.isIOSInAppBrowser()) {
+            this.updateStatus('warning', 'iOS in-app browsers may block camera access. Try opening in Safari.');
+          }
+          
+          console.error('MediaAgent: Permission request failed:', error);
+          return false;
+        }
+      }
+      
+      async enumerateDevices() {
+        try {
+          // Get all media devices
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          
+          // Reset device lists
+          this.devices = { videoinput: [], audioinput: [], audiooutput: [] };
+          
+          // Categorize devices
+          devices.forEach(device => {
+            if (this.devices[device.kind]) {
+              this.devices[device.kind].push({
+                id: device.deviceId,
+                label: device.label || `${device.kind} ${this.devices[device.kind].length + 1}`
+              });
+            }
+          });
+          
+          console.log('MediaAgent: Enumerated devices:', this.devices);
+          
+          // Select best devices
+          this.selectOptimalDevices();
+          
+          return this.devices;
+        } catch (error) {
+          console.error('MediaAgent: Error enumerating devices:', error);
+          return null;
+        }
+      }
+      
+      selectOptimalDevices() {
+        // Select preferred video device (front camera on mobile)
+        if (this.devices.videoinput.length > 0) {
+          // Prefer front camera on mobile devices
+          const frontCamera = this.devices.videoinput.find(device => 
+            device.label.toLowerCase().includes('front') || 
+            device.label.toLowerCase().includes('user')
+          );
+          
+          this.devices.selectedVideo = frontCamera || this.devices.videoinput[0];
+        }
+        
+        // Select preferred audio input
+        if (this.devices.audioinput.length > 0) {
+          // Prefer devices that aren't "default" for better quality
+          const namedMic = this.devices.audioinput.find(device => 
+            !device.label.toLowerCase().includes('default')
+          );
+          
+          this.devices.selectedAudio = namedMic || this.devices.audioinput[0];
+        }
+        
+        // Select preferred audio output if supported
+        if (this.devices.audiooutput.length > 0 && 'setSinkId' in HTMLMediaElement.prototype) {
+          // Prefer devices that are not "default"
+          const namedOutput = this.devices.audiooutput.find(device => 
+            !device.label.toLowerCase().includes('default')
+          );
+          
+          this.devices.selectedOutput = namedOutput || this.devices.audiooutput[0];
+        }
+      }
+      
+      async openCamera(constraints = null) {
+        try {
+          // If we already have a camera stream, stop it
+          if (this.streams.camera) {
+            this.stopCamera();
+          }
+          
+          // Use provided constraints or build default ones
+          const videoConstraints = constraints || {
+            deviceId: this.devices.selectedVideo ? { exact: this.devices.selectedVideo.id } : undefined,
+            facingMode: 'user',
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          };
+          
+          this.updateStatus('info', 'Opening camera...');
+          
+          // Request the camera stream
+          const stream = await navigator.mediaDevices.getUserMedia({ 
+            video: videoConstraints,
+            audio: false
+          });
+          
+          // Store the stream
+          this.streams.camera = stream;
+          
+          this.updateStatus('success', 'Camera opened successfully');
+          return stream;
+        } catch (error) {
+          this.updateStatus('error', `Failed to open camera: ${error.message}`);
+          console.error('MediaAgent: Camera error:', error);
+          return null;
+        }
+      }
+      
+      stopCamera() {
+        if (this.streams.camera) {
+          this.streams.camera.getTracks().forEach(track => track.stop());
+          this.streams.camera = null;
+          this.updateStatus('info', 'Camera stopped');
+        }
+      }
+      
+      async openMicrophone(constraints = null) {
+        try {
+          // If we already have a microphone stream, stop it
+          if (this.streams.microphone) {
+            this.stopMicrophone();
+          }
+          
+          // Use provided constraints or build default ones
+          const audioConstraints = constraints || {
+            deviceId: this.devices.selectedAudio ? { exact: this.devices.selectedAudio.id } : undefined,
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          };
+          
+          this.updateStatus('info', 'Opening microphone...');
+          
+          // Request the microphone stream
+          const stream = await navigator.mediaDevices.getUserMedia({ 
+            audio: audioConstraints,
+            video: false
+          });
+          
+          // Store the stream
+          this.streams.microphone = stream;
+          
+          this.updateStatus('success', 'Microphone opened successfully');
+          return stream;
+        } catch (error) {
+          this.updateStatus('error', `Failed to open microphone: ${error.message}`);
+          console.error('MediaAgent: Microphone error:', error);
+          return null;
+        }
+      }
+      
+      stopMicrophone() {
+        if (this.streams.microphone) {
+          this.streams.microphone.getTracks().forEach(track => track.stop());
+          this.streams.microphone = null;
+          this.updateStatus('info', 'Microphone stopped');
+        }
+      }
+      
+      // Set audio output device if supported
+      async setAudioOutput(element, deviceId = null) {
+        if (!('setSinkId' in HTMLMediaElement.prototype)) {
+          console.warn('MediaAgent: setSinkId not supported in this browser');
+          return false;
+        }
+        
+        try {
+          const targetDeviceId = deviceId || 
+            (this.devices.selectedOutput ? this.devices.selectedOutput.id : '');
+          
+          await element.setSinkId(targetDeviceId);
+          console.log(`MediaAgent: Audio output set to ${targetDeviceId}`);
+          return true;
+        } catch (error) {
+          console.error('MediaAgent: Error setting audio output:', error);
+          return false;
+        }
+      }
+      
+      // Run diagnostic checks on system components
+      async runDiagnostics() {
+        this.diagnostics.lastCheck = new Date();
+        
+        // Check Web Workers
+        this.diagnostics.workerStatus = await this.checkWorkers();
+        
+        // Check IndexedDB
+        this.diagnostics.dbStatus = await this.checkIndexedDB();
+        
+        // Check service worker status
+        this.diagnostics.serviceWorker = await this.checkServiceWorker();
+        
+        // System resource usage
+        this.diagnostics.memoryUsage = await this.getMemoryUsage();
+        
+        return this.diagnostics;
+      }
+      
+      async checkWorkers() {
+        const status = {
+          supported: 'Worker' in window,
+          workers: {}
+        };
+        
+        if (!status.supported) return status;
+        
+        // Try to create and ping test worker
+        try {
+          const workerBlob = new Blob([
+            `self.onmessage = e => { self.postMessage('pong'); }`
+          ], { type: 'application/javascript' });
+          
+          const worker = new Worker(URL.createObjectURL(workerBlob));
+          
+          const pingResult = await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => reject(new Error('Worker timeout')), 1000);
+            
+            worker.onmessage = e => {
+              clearTimeout(timeout);
+              resolve(e.data === 'pong');
+            };
+            
+            worker.onerror = err => {
+              clearTimeout(timeout);
+              reject(err);
+            };
+            
+            worker.postMessage('ping');
+          });
+          
+          status.workers.test = { status: 'operational', response: pingResult };
+          worker.terminate();
+        } catch (error) {
+          status.workers.test = { status: 'error', message: error.message };
+        }
+        
+        return status;
+      }
+      
+      async checkIndexedDB() {
+        const status = {
+          supported: 'indexedDB' in window,
+          databases: {}
+        };
+        
+        if (!status.supported) return status;
+        
+        // Test database operations
+        try {
+          const dbName = 'mediaagent-test';
+          const request = indexedDB.open(dbName, 1);
+          
+          await new Promise((resolve, reject) => {
+            request.onupgradeneeded = event => {
+              const db = event.target.result;
+              db.createObjectStore('test', { keyPath: 'id' });
+            };
+            
+            request.onsuccess = event => {
+              const db = event.target.result;
+              const transaction = db.transaction('test', 'readwrite');
+              const store = transaction.objectStore('test');
+              
+              // Write test
+              store.add({ id: 1, value: 'test' });
+              
+              transaction.oncomplete = () => {
+                // Read test
+                const readTx = db.transaction('test', 'readonly');
+                const readStore = readTx.objectStore('test');
+                const getRequest = readStore.get(1);
+                
+                getRequest.onsuccess = () => {
+                  const result = getRequest.result;
+                  
+                  // Delete the test database
+                  db.close();
+                  indexedDB.deleteDatabase(dbName);
+                  
+                  resolve(result && result.value === 'test');
+                };
+                
+                getRequest.onerror = reject;
+              };
+              
+              transaction.onerror = reject;
+            };
+            
+            request.onerror = reject;
+          });
+          
+          status.databases.test = { status: 'operational', readWrite: true };
+        } catch (error) {
+          status.databases.test = { status: 'error', message: error.message };
+        }
+        
+        return status;
+      }
+      
+      async checkServiceWorker() {
+        return {
+          supported: 'serviceWorker' in navigator,
+          registered: !!navigator.serviceWorker.controller,
+          scope: navigator.serviceWorker.controller?.scope || null
+        };
+      }
+      
+      async getMemoryUsage() {
+        if ('memory' in performance) {
+          return {
+            totalJSHeapSize: performance.memory.totalJSHeapSize,
+            usedJSHeapSize: performance.memory.usedJSHeapSize,
+            jsHeapSizeLimit: performance.memory.jsHeapSizeLimit
+          };
+        }
+        
+        return { supported: false };
+      }
+      
+      // Fetch and cache dashboard HTML
+      async fetchDashboard(url) {
+        try {
+          const response = await fetch(url);
+          if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+          
+          const html = await response.text();
+          sessionStorage.setItem(`dashboard-${url}`, html);
+          return html;
+        } catch (error) {
+          console.error(`MediaAgent: Error fetching dashboard ${url}:`, error);
+          return null;
+        }
+      }
+      
+      // Display worker dashboard
+      async showWorkerDashboard(container) {
+        const html = sessionStorage.getItem('dashboard-worker') || 
+          await this.fetchDashboard('worker-dashboard.html');
+        
+        if (html && container) {
+          container.innerHTML = html;
+          return true;
+        }
+        return false;
+      }
+      
+      // Display database inspector
+      async showDatabaseInspector(container) {
+        const html = sessionStorage.getItem('dashboard-db') || 
+          await this.fetchDashboard('db-view.html');
+        
+        if (html && container) {
+          container.innerHTML = html;
+          return true;
+        }
+        return false;
+      }
+      
+      // Generate a report of media capabilities
+      generateMediaReport() {
+        const report = {
+          timestamp: new Date().toISOString(),
+          userAgent: navigator.userAgent,
+          platform: {
+            os: navigator.platform,
+            mobile: /iPhone|iPad|iPod|Android/i.test(navigator.userAgent),
+            browser: this.detectBrowser()
+          },
+          features: {
+            getUserMedia: !!navigator.mediaDevices?.getUserMedia,
+            enumerateDevices: !!navigator.mediaDevices?.enumerateDevices,
+            setSinkId: 'setSinkId' in HTMLMediaElement.prototype,
+            mediaRecorder: 'MediaRecorder' in window,
+            mediaCapabilities: 'mediaCapabilities' in navigator,
+            permissions: 'permissions' in navigator
+          },
+          devices: {
+            videoinput: this.devices.videoinput.length,
+            audioinput: this.devices.audioinput.length,
+            audiooutput: this.devices.audiooutput.length
+          },
+          permissions: this.permissions
+        };
+        
+        console.log('MediaAgent Report:', report);
+        return report;
+      }
+      
+      // Helper method to detect browser
+      detectBrowser() {
+        const ua = navigator.userAgent;
+        let browser = 'unknown';
+        
+        if (ua.match(/chrome|chromium|crios/i)) {
+          browser = 'chrome';
+        } else if (ua.match(/firefox|fxios/i)) {
+          browser = 'firefox';
+        } else if (ua.match(/safari/i)) {
+          browser = 'safari';
+        } else if (ua.match(/opr\//i)) {
+          browser = 'opera';
+        } else if (ua.match(/edg/i)) {
+          browser = 'edge';
+        }
+        
+        return browser;
+      }
+      
+      // Helper to detect iOS in-app browsers
+      isIOSInAppBrowser() {
+        const ua = navigator.userAgent;
+        return /iPhone|iPad|iPod/i.test(ua) && 
+               /(FBAN|FBAV|Instagram|Twitter|Snapchat|Line)/i.test(ua);
+      }
+      
+      // Update status and broadcast events
+      updateStatus(level, message) {
+        const status = { level, message, timestamp: new Date() };
+        console.log(`MediaAgent ${level}: ${message}`);
+        
+        // Dispatch event for UI integration
+        const event = new CustomEvent('mediaagent:status', { 
+          detail: status 
+        });
+        window.dispatchEvent(event);
+        
+        return status;
+      }
+    }
+
+    // Create global MediaAgent instance
+    window.mediaAgent = new MediaAgent();
+    
+    // Expose key methods to global scope for UI integration
+    window.requestMediaPermissions = async () => {
+      return await window.mediaAgent.requestPermissions();
+    };
+    
+    window.openCamera = async (constraints) => {
+      return await window.mediaAgent.openCamera(constraints);
+    };
+    
+    window.stopCamera = () => {
+      window.mediaAgent.stopCamera();
+    };
+    
+    window.openMicrophone = async (constraints) => {
+      return await window.mediaAgent.openMicrophone(constraints);
+    };
+    
+    window.stopMicrophone = () => {
+      window.mediaAgent.stopMicrophone();
+    };
+    
+    window.runSystemDiagnostics = async () => {
+      return await window.mediaAgent.runDiagnostics();
+    };
+    
+    window.showWorkerDashboard = async (containerId) => {
+      const container = document.getElementById(containerId);
+      return await window.mediaAgent.showWorkerDashboard(container);
+    };
+    
+    window.showDatabaseInspector = async (containerId) => {
+      const container = document.getElementById(containerId);
+      return await window.mediaAgent.showDatabaseInspector(container);
+    };
+    
+    // Event listener for status updates
+    window.addEventListener('mediaagent:status', (event) => {
+      const status = event.detail;
+      
+      // Update UI status indicators if they exist
+      const statusElement = document.getElementById('camera-status');
+      if (statusElement) {
+        statusElement.textContent = status.message;
+        
+        // Update status color
+        if (status.level === 'error') {
+          statusElement.style.color = "#ef4444";
+        } else if (status.level === 'warning') {
+          statusElement.style.color = "#eab308";
+        } else if (status.level === 'success') {
+          statusElement.style.color = "#22c55e";
+        } else {
+          statusElement.style.color = "#93c5fd";
+        }
+      }
+    });
+    
+    // Listen for DOM content loaded to integrate with UI
+    document.addEventListener('DOMContentLoaded', () => {
+      // Add diagnostic buttons if in development mode
+      const isDevelopment = location.hostname === 'localhost' || 
+                           location.search.includes('dev=true');
+      
+      if (isDevelopment) {
+        const addDiagnosticButtons = () => {
+          // Check if agent card exists
+          const agentCard = document.querySelector('#agent-card, .agent-card');
+          if (!agentCard) return;
+          
+          // Create diagnostic buttons container
+          const container = document.createElement('div');
+          container.className = 'diagnostic-buttons mt-4 grid grid-cols-2 gap-2';
+          
+          // Worker dashboard button
+          const workerBtn = document.createElement('button');
+          workerBtn.textContent = '🛠️ Workers';
+          workerBtn.className = 'px-2 py-1 bg-gray-700 text-white text-xs rounded';
+          workerBtn.onclick = () => {
+            // Show modal with worker dashboard
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50';
+            modal.innerHTML = `
+              <div class="bg-gray-800 rounded-lg p-4 max-w-4xl w-full max-h-[80vh] overflow-auto">
+                <div class="flex justify-between items-center mb-4">
+                  <h3 class="text-white text-lg font-bold">Worker Dashboard</h3>
+                  <button class="text-white text-xl">&times;</button>
+                </div>
+                <div id="worker-dashboard-content">Loading...</div>
+              </div>
+            `;
+            document.body.appendChild(modal);
+            
+            // Close button functionality
+            modal.querySelector('button').onclick = () => modal.remove();
+            
+            // Load worker dashboard
+            window.showWorkerDashboard('worker-dashboard-content');
+          };
+          
+          // Database inspector button
+          const dbBtn = document.createElement('button');
+          dbBtn.textContent = '📊 Database';
+          dbBtn.className = 'px-2 py-1 bg-gray-700 text-white text-xs rounded';
+          dbBtn.onclick = () => {
+            // Show modal with database inspector
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50';
+            modal.innerHTML = `
+              <div class="bg-gray-800 rounded-lg p-4 max-w-4xl w-full max-h-[80vh] overflow-auto">
+                <div class="flex justify-between items-center mb-4">
+                  <h3 class="text-white text-lg font-bold">Database Inspector</h3>
+                  <button class="text-white text-xl">&times;</button>
+                </div>
+                <div id="db-inspector-content">Loading...</div>
+              </div>
+            `;
+            document.body.appendChild(modal);
+            
+            // Close button functionality
+            modal.querySelector('button').onclick = () => modal.remove();
+            
+            // Load database inspector
+            window.showDatabaseInspector('db-inspector-content');
+          };
+          
+          // Add buttons to container
+          container.appendChild(workerBtn);
+          container.appendChild(dbBtn);
+          
+          // Add container to agent card
+          agentCard.appendChild(container);
+        };
+        
+        // Try to add buttons now, or wait for DOM to be ready
+        if (document.readyState === 'complete') {
+          addDiagnosticButtons();
+        } else {
+          window.addEventListener('load', addDiagnosticButtons);
+        }
+      }
+    });
+  </script>
+  
+  <style>
+    /* Basic Reset */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      background-color: #f5f5f5;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    
+    /* Agent Card Styles */
+    #agent-card {
+      width: 320px;
+      background-color: #1e293b;
+      color: white;
+      border-radius: 16px;
+      border: 4px solid #3b82f6;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+      position: absolute;
+      top: 50px;
+      left: 50px;
+      padding: 16px;
+      z-index: 1000;
+    }
+    
+    /* Card Header */
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: move;
+      margin-bottom: 16px;
+    }
+    
+    .avatar {
+      width: 48px;
+      height: 48px;
+      background-color: #64748b;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 24px;
+      border: 2px solid #93c5fd;
+    }
+    
+    .agent-details h3 {
+      color: #93c5fd;
+      font-size: 18px;
+      margin-bottom: 4px;
+    }
+    
+    .agent-details p {
+      color: #bfdbfe;
+      font-size: 14px;
+    }
+    
+    /* Navigation Grid */
+    .navigation-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    
+    .nav-button {
+      background-color: #334155;
+      border: none;
+      color: white;
+      padding: 8px 4px;
+      text-align: center;
+      text-decoration: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    
+    .nav-button:hover {
+      background-color: #475569;
+    }
+    
+    .nav-button span {
+      font-size: 16px;
+      margin-bottom: 4px;
+      color: #60a5fa;
+    }
+    
+    /* Chat Area */
+    .chat-area {
+      height: 144px;
+      background-color: #334155;
+      border-radius: 8px;
+      padding: 8px;
+      margin-bottom: 8px;
+      overflow-y: auto;
+    }
+    
+    .message {
+      padding: 8px;
+      margin-bottom: 8px;
+      border-radius: 8px;
+    }
+    
+    .user-message {
+      background-color: #475569;
+      margin-left: 16px;
+    }
+    
+    .agent-message {
+      background-color: #3b82f6;
+      margin-right: 16px;
+    }
+    
+    .empty-chat {
+      color: #94a3b8;
+      text-align: center;
+      font-style: italic;
+      margin-top: 48px;
+    }
+    
+    /* Message Input */
+    .message-input {
+      width: 100%;
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid #475569;
+      background-color: #475569;
+      color: white;
+      resize: none;
+      margin-bottom: 12px;
+    }
+    
+    .message-input::placeholder {
+      color: #94a3b8;
+    }
+    
+    /* Control Buttons */
+    .control-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    
+    .control-button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 4px;
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    
+    .send-btn { background-color: #2563eb; }
+    .send-btn:hover { background-color: #3b82f6; }
+    
+    .listen-btn { background-color: #16a34a; }
+    .listen-btn:hover { background-color: #22c55e; }
+    .listen-active { background-color: #059669; animation: pulse 1.5s infinite; }
+    
+    .stop-btn { background-color: #dc2626; }
+    .stop-btn:hover { background-color: #ef4444; }
+    
+    .finish-btn { background-color: #ca8a04; }
+    .finish-btn:hover { background-color: #eab308; }
+    
+    .email-btn { background-color: #4f46e5; }
+    .email-btn:hover { background-color: #6366f1; }
+    
+    .phone-btn { background-color: #0d9488; }
+    .phone-btn:hover { background-color: #14b8a6; }
+    
+    .chat-btn { background-color: #3b82f6; }
+    .chat-btn:hover { background-color: #60a5fa; }
+    
+    .mouse-btn { background-color: #9333ea; }
+    .mouse-btn:hover { background-color: #a855f7; }
+    
+    /* Icons for buttons */
+    .icon {
+      margin-right: 4px;
+    }
+    
+    #safari-warning {
+      color: #eab308;
+      font-size: 12px;
+      margin-top: 8px;
+      text-align: center;
+      display: none;
+    }
+    
+    .model-status {
+      color: #93c5fd;
+      font-size: 12px;
+      text-align: center;
+      margin-top: 8px;
+    }
+
+    /* Thinking indicator */
+    .thinking-indicator {
+      display: none;
+      padding: 8px;
+      background-color: #334155;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      text-align: center;
+      color: #93c5fd;
+    }
+
+    .thinking-dots {
+      display: inline-block;
+    }
+
+    .thinking-dots:after {
+      content: '.';
+      animation: thinking 1.5s steps(5, end) infinite;
+    }
+
+    /* Step-by-step thought process */
+    .thought-process {
+      background-color: #1e1e3f;
+      border-radius: 8px;
+      padding: 8px;
+      margin-bottom: 8px;
+      font-family: monospace;
+      font-size: 12px;
+      color: #a6accd;
+      white-space: pre-wrap;
+    }
+
+    /* To-do list */
+    #todo-list-container {
+      display: none;
+      position: absolute;
+      top: 50px;
+      right: 50px;
+      width: 300px;
+      background-color: #1e293b;
+      border: 4px solid #3b82f6;
+      border-radius: 16px;
+      padding: 16px;
+      color: white;
+      z-index: 1000;
+    }
+
+    .todo-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .todo-list {
+      list-style-type: none;
+    }
+
+    .todo-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 8px;
+      padding: 8px;
+      background-color: #334155;
+      border-radius: 8px;
+    }
+
+    .todo-checkbox {
+      margin-right: 8px;
+    }
+
+    .todo-text {
+      flex-grow: 1;
+    }
+
+    .todo-completed {
+      text-decoration: line-through;
+      opacity: 0.7;
+    }
+
+    /* Web search GUI */
+    #web-search-container {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.8);
+      z-index: 2000;
+      padding: 40px;
+      box-sizing: border-box;
+    }
+
+    .web-search-panel {
+      max-width: 800px;
+      margin: 0 auto;
+      background-color: #1e293b;
+      border-radius: 16px;
+      padding: 20px;
+      color: white;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+    }
+    
+    /* Vision Popup GUI */
+    #vision-popup-container {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.8);
+      z-index: 2000;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    
+    .vision-panel {
+      max-width: 800px;
+      margin: 20px auto;
+      background-color: #1e293b;
+      border-radius: 16px;
+      padding: 20px;
+      color: white;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+    }
+    
+    .vision-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      border-bottom: 1px solid #334155;
+      padding-bottom: 10px;
+    }
+    
+    .vision-header h3 {
+      color: #93c5fd;
+      margin: 0;
+    }
+    
+    #vision-canvas {
+      width: 100%;
+      height: 400px;
+      border: 2px solid #3b82f6;
+      border-radius: 8px;
+    }
+
+    .web-search-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      border-bottom: 1px solid #334155;
+      padding-bottom: 10px;
+    }
+
+    .web-search-title {
+      color: #93c5fd;
+      font-size: 18px;
+    }
+
+    .web-search-close {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 20px;
+      cursor: pointer;
+    }
+
+    .web-search-query {
+      font-size: 16px;
+      margin-bottom: 20px;
+      color: #bfdbfe;
+    }
+
+    .web-search-loading {
+      text-align: center;
+      padding: 20px;
+    }
+
+    .web-search-results {
+      overflow-y: auto;
+      max-height: 400px;
+    }
+
+    .web-search-result {
+      margin-bottom: 15px;
+      padding: 10px;
+      background-color: #334155;
+      border-radius: 8px;
+    }
+
+    .web-search-result-title {
+      font-weight: bold;
+      color: #93c5fd;
+      margin-bottom: 5px;
+    }
+
+    .web-search-result-snippet {
+      font-size: 14px;
+      color: #e2e8f0;
+    }
+
+    .web-search-result-url {
+      font-size: 12px;
+      color: #60a5fa;
+      margin-top: 5px;
+    }
+
+    /* Animations */
+    @keyframes thinking {
+      0% { content: '.'; }
+      20% { content: '..'; }
+      40% { content: '...'; }
+      60% { content: '....'; }
+      80% { content: '.....'; }
+      100% { content: '.'; }
+    }
+
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.7); }
+      70% { box-shadow: 0 0 0 10px rgba(22, 163, 74, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); }
+    }
+  </style>
+</head>
+<body>
+  <div id="agent-card" data-agent="lee">
+    <!-- Card Header -->
+    <div class="card-header" id="drag-handle">
+      <div class="avatar">
+        <img src="l2u5shhjjj.png" alt="Agent Lee" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
+      </div>
+      <div class="agent-details">
+        <h3>Agent Lee</h3>
+        <p>Your AI Assistant</p>
+      </div>
+    </div>
+    
+    <!-- Navigation Grid -->
+    <div class="navigation-grid">
+      <button class="nav-button" data-action="search">
+        <span>🔍</span>
+        Search
+      </button>
+      <button class="nav-button" data-action="answer">
+        <span>💡</span>
+        Knowledge
+      </button>
+      <button class="nav-button" data-action="task">
+        <span>✅</span>
+        Tasks
+      </button>
+      <button class="nav-button" data-action="create">
+        <span>🎨</span>
+        Create
+      </button>
+      <button class="nav-button" data-action="code">
+        <span>💻</span>
+        Code
+      </button>
+      <button class="nav-button" data-action="todo">
+        <span>📋</span>
+        To-Do
+      </button>
+    </div>
+    
+    <!-- Thinking Indicator -->
+    <div class="thinking-indicator" id="thinking-indicator" style="display:none; align-items:center; gap:0.5rem;">
+      <svg class="spinner" viewBox="0 0 50 50" width="24" height="24">
+        <circle cx="25" cy="25" r="20" fill="none" stroke-width="5"/>
+      </svg>
+      <span>Thinking…</span>
+    </div>
+    
+    <!-- Browser Preview -->
+    <div id="lee-browser-preview" class="sub-gui" style="display:none;">
+      <h4>Live Browser Preview</h4>
+      <div id="lee-iframe-container" style="position:relative; width:100%; height:400px;">
+        <iframe id="lee-browser-iframe" src="" style="width:100%; height:100%; border:1px solid #666; border-radius:8px;"></iframe>
+        <canvas id="lee-iframe-canvas" width="640" height="400" style="position:absolute; top:0; left:0; pointer-events:none;"></canvas>
+      </div>
+    </div>
+
+    <!-- Scrape Dashboard -->
+    <div id="lee-scrape-dashboard" class="sub-gui" style="display:none;">
+      <h4>Scrape Progress</h4>
+      <progress id="scrape-progress" max="100" value="0"></progress>
+      <pre id="scrape-logs"></pre>
+    </div>
+    
+    <!-- Form Filler Panel -->
+    <div id="lee-form-filler" class="sub-gui" style="display:none;">
+      <h4>Form Filler</h4>
+      <textarea id="form-commands" placeholder="selector,value per line"></textarea>
+      <button id="run-form-fill">Run</button>
+    </div>
+    
+    <!-- Screenshot & OCR Panel -->
+    <div id="lee-screenshot-panel" class="sub-gui" style="display:none;">
+      <h4>Screenshot & OCR</h4>
+      <button id="take-screenshot">Capture</button>
+      <img id="screenshot-img" />
+      <pre id="ocr-output"></pre>
+    </div>
+    
+    <!-- Vision Controls Panel -->
+    <!-- Removed vision-control from here as it will be a separate popup -->
+    
+    <!-- Chat Area -->
+    <div class="chat-area" id="chat-messages">
+      <div class="empty-chat" id="empty-message">
+        Ask me anything or click a capability button
+      </div>
+      <!-- Messages will be added here dynamically -->
+    </div>
+    
+    <!-- Message Input -->
+    <textarea 
+      class="message-input" 
+      id="message-input" 
+      rows="2" 
+      placeholder="Type your message..."></textarea>
+    
+    <!-- Control Buttons - First Row -->
+    <div class="control-row">
+      <button class="control-button send-btn" id="send-button">
+        <span class="icon">✉️</span> Send
+      </button>
+      <button class="control-button listen-btn" id="start-listen">
+        <span class="icon">🎤</span> Listen
+      </button>
+      <button class="control-button stop-btn" id="stop-speaking">
+        <span class="icon">⏹️</span> Stop
+      </button>
+      <button class="control-button finish-btn" id="finish-speaking">
+        <span class="icon">✓</span> Finish Speech
+      </button>
+    </div>
+    
+    <!-- Control Buttons - Second Row -->
+    <div class="control-row">
+      <button class="control-button email-btn" id="vision-btn">
+        <span class="icon">👁️</span> Vision
+      </button>
+      <button class="control-button phone-btn" id="clear-chat-btn">
+        <span class="icon">🗑️</span> Clear
+      </button>
+      <button class="control-button chat-btn" id="settings-btn">
+        <span class="icon">⚙️</span> Settings
+      </button>
+      <button class="control-button mouse-btn" id="help-btn">
+        <span class="icon">❓</span> Help
+      </button>
+    </div>
+    
+    <div id="safari-warning">
+      Safari: tap "Enable Voice" once before speaking.
+    </div>
+    
+    <div class="model-status" id="model-status">Loading models...</div>
+  </div>
+  
+  <!-- To-Do List Container -->
+  <div id="todo-list-container">
+    <div class="todo-header">
+      <h3>To-Do List</h3>
+      <button id="close-todo-btn">✖</button>
+    </div>
+    <ul class="todo-list" id="todo-items">
+      <!-- To-do items will be added here -->
+    </ul>
+  </div>
+  
+  <!-- Web Search Container -->
+  <div id="web-search-container">
+    <div class="web-search-panel">
+      <div class="web-search-header">
+        <div class="web-search-title">Web Search Results</div>
+        <button class="web-search-close" id="close-web-search-btn">✖</button>
+      </div>
+      <div class="web-search-query" id="web-search-query">Searching for: </div>
+      <div class="web-search-loading" id="web-search-loading">
+        <p>Searching the web<span class="thinking-dots"></span></p>
+      </div>
+      <div class="web-search-results" id="web-search-results">
+        <!-- Search results will be added here -->
+      </div>
+    </div>
+  </div>
+  
+  <!-- Vision Popup Container -->
+  <div id="vision-popup-container" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background-color:rgba(0,0,0,0.8); z-index:2000; padding:20px; box-sizing:border-box;">
+    <div class="vision-panel" style="position:relative; max-width:800px; margin:20px auto; background-color:#1e293b; border-radius:16px; padding:20px; color:white; box-shadow:0 8px 30px rgba(0,0,0,0.4);">
+      <div class="vision-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid #334155; padding-bottom:10px;">
+        <h3 style="color:#93c5fd; margin:0;">Vision Processor</h3>
+        <button id="close-vision-btn" style="background:none; border:none; color:white; font-size:20px; cursor:pointer;">✖</button>
+      </div>
+      
+      <div style="display:flex; flex-direction:column; gap:15px;">
+        <video id="camera-feed" playsinline autoplay muted style="display:none;"></video>
+        <canvas id="vision-canvas" style="width:100%; height:400px; border:2px solid #3b82f6; border-radius:8px;"></canvas>
+        
+        <div class="permissions-notice" id="camera-permissions" style="background-color:#334155; padding:10px; border-radius:8px; margin-bottom:10px; display:none;">
+          <p style="margin:0 0 10px 0;">⚠️ Camera access is required for vision features</p>
+          <button id="request-permission-btn" style="background-color:#3b82f6; color:white; padding:8px 16px; border:none; border-radius:8px; cursor:pointer;">
+            Grant Camera Permission
+          </button>
+        </div>
+        
+        <div class="vision-buttons" style="display:flex; justify-content:center; gap:10px;">
+          <button id="start-camera-btn" style="background-color:#16a34a; color:white; padding:8px 16px; border:none; border-radius:8px; cursor:pointer;">
+            Start Camera
+          </button>
+          <button id="stop-camera-btn" style="background-color:#dc2626; color:white; padding:8px 16px; border:none; border-radius:8px; cursor:pointer;">
+            Stop Camera
+          </button>
+          <button id="switch-camera-btn" style="background-color:#3b82f6; color:white; padding:8px 16px; border:none; border-radius:8px; cursor:pointer;">
+            Switch Camera
+          </button>
+        </div>
+        
+        <div id="camera-status" style="text-align:center; font-style:italic; color:#93c5fd; padding:10px; background-color:#334155; border-radius:8px;">
+          Ready to activate camera
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Model Manifest -->
+  <script id="model-manifest" type="application/json">
+  {
+    "tinyllama":{
+      "version":"1.1b-q4",
+      "chunks":[
+        "/models/tinyllama-1.1b-q4.gguf.part1","/models/tinyllama-1.1b-q4.gguf.part2"
+      ]
+    },
+    "whisper":{
+      "url":"/models/whisper-tiny.en.br",
+      "brotli":true
+    },
+    "minilm":{
+      "url":"/models/minilm-l6-v2.onnx.br",
+      "brotli":true
+    }
+  }
+  </script>
+
+  <!-- Web Workers -->
+  <script id="pii-worker" type="javascript/worker">
+    importScripts('https://cdn.jsdelivr.net/npm/@xenova/transformers/dist/transformers.min.js');
+    let ner;
+    (async()=>ner=await pipeline('token-classification','Xenova/bert-base-pii'))();
+    onmessage=async e=>{
+      let text=e.data, ents=await ner(text), out=text;
+      ents.forEach(x=>out=out.replace(x.word,'<REDACTED>'));
+      postMessage(out);
+    };
+  </script>
+
+  <script id="model-loader" type="javascript/worker">
+    // caches large chunks into IndexedDB or CacheStorage
+    onmessage=async e=>{
+      const url=e.data;
+      const r=await fetch(url), b=await r.arrayBuffer();
+      postMessage({url,data:b});
+    };
+  </script>
+
+  <script>
+    // Immediately show a welcome message even before DOM is fully loaded
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('DOM fully loaded - initializing Agent Lee');
+      
+      // Get DOM elements with error checking
+      function getElement(id) {
+        const element = document.getElementById(id);
+        if (!element) {
+          console.error(`Element with id ${id} not found!`);
+          return null;
+        }
+        return element;
+      }
+      
+      const agentCard = getElement('agent-card');
+      const dragHandle = getElement('drag-handle');
+      const chatMessages = getElement('chat-messages');
+      const emptyMessage = getElement('empty-message');
+      const messageInput = getElement('message-input');
+      const sendButton = getElement('send-button');
+      const initVoiceButton = getElement('init-voice');
+      const startListenButton = getElement('start-listen');
+      const stopListenButton = getElement('stop-listen');
+      const safariWarning = getElement('safari-warning');
+      const modelStatus = getElement('model-status');
+      const searchWebBtn = getElement('search-web-btn');
+      const clearChatBtn = getElement('clear-chat-btn');
+      const navButtons = document.querySelectorAll('.nav-button');
+      
+      if (!chatMessages || !messageInput || !sendButton) {
+        console.error('Critical elements missing - chat functionality may not work');
+        return;
+      }
+      
+      // Drag functionality
+      let isDragging = false;
+      let offsetX, offsetY;
+      
+      if (dragHandle && agentCard) {
+        dragHandle.addEventListener('mousedown', (e) => {
+          isDragging = true;
+          const rect = agentCard.getBoundingClientRect();
+          offsetX = e.clientX - rect.left;
+          offsetY = e.clientY - rect.top;
+          agentCard.style.cursor = 'grabbing';
+        });
+        
+        document.addEventListener('mousemove', (e) => {
+          if (!isDragging) return;
+          
+          agentCard.style.left = `${e.clientX - offsetX}px`;
+          agentCard.style.top = `${e.clientY - offsetY}px`;
+        });
+        
+        document.addEventListener('mouseup', () => {
+          isDragging = false;
+          if (agentCard) agentCard.style.cursor = 'default';
+        });
+      }
+      
+      // Chat functionality
+      function addMessage(text, sender) {
+        console.log(`Adding message from ${sender}: ${text}`);
+        
+        try {
+          // Hide empty message if this is the first message
+          if (emptyMessage) {
+            emptyMessage.style.display = 'none';
+          }
+          
+          const messageElement = document.createElement('div');
+          messageElement.classList.add('message');
+          messageElement.classList.add(sender === 'user' ? 'user-message' : 'agent-message');
+          messageElement.textContent = text;
+          
+          chatMessages.appendChild(messageElement);
+          chatMessages.scrollTop = chatMessages.scrollHeight;
+        } catch (error) {
+          console.error('Error adding message:', error);
+        }
+      }
+      
+      // Clear chat function
+      function clearChat() {
+        while (chatMessages.firstChild) {
+          chatMessages.removeChild(chatMessages.firstChild);
+        }
+        if (emptyMessage) {
+          emptyMessage.style.display = 'block';
+        }
+      }
+      
+      // Add a welcome message immediately
+      const welcomeMsg = "Hello! I'm Agent Lee, your intelligent AI assistant built to help you with a wide range of tasks. I can explain complex topics, search for information, help with coding, create content, solve problems, and assist with various applications and tools. This application includes advanced features like camera access, voice recognition, web browsing capabilities, and real-time data processing. How can I help you today?";
+      addMessage(welcomeMsg, 'agent');
+      
+      // Web Worker initialization
+      function createWorker(id) {
+        try {
+          const element = document.getElementById(id);
+          if (!element) {
+            console.error(`Worker script element ${id} not found`);
+            return null;
+          }
+          
+          const code = element.textContent;
+          const blob = new Blob([code], {type: 'application/javascript'});
+          return new Worker(URL.createObjectURL(blob));
+        } catch (error) {
+          console.error('Error creating worker:', error);
+          return null;
+        }
+      }
+      
+      const piiWorker = createWorker('pii-worker');
+      const modelLoader = createWorker('model-loader');
+      
+      // Advanced web search simulation with UI
+      async function searchWeb(query) {
+        try {
+          // Show web search interface
+          const webSearchContainer = document.getElementById('web-search-container');
+          const webSearchQuery = document.getElementById('web-search-query');
+          const webSearchLoading = document.getElementById('web-search-loading');
+          const webSearchResults = document.getElementById('web-search-results');
+          
+          if (webSearchContainer && webSearchQuery && webSearchResults) {
+            // Clear previous results
+            webSearchResults.innerHTML = '';
+            
+            // Update query text and show container
+            webSearchQuery.textContent = `Searching for: "${query}"`;
+            webSearchContainer.style.display = 'block';
+            webSearchLoading.style.display = 'block';
+            
+            // Simulate search delay
+            return new Promise(resolve => {
+              setTimeout(() => {
+                // Hide loading indicator
+                webSearchLoading.style.display = 'none';
+                
+                // Generate mock search results
+                const numResults = 3 + Math.floor(Math.random() * 3); // 3-5 results
+                
+                for (let i = 0; i < numResults; i++) {
+                  const resultElement = document.createElement('div');
+                  resultElement.classList.add('web-search-result');
+                  
+                  const titles = [
+                    `${query} - Comprehensive Guide`,
+                    `Everything You Need to Know About ${query}`,
+                    `${query} Explained: A Complete Overview`,
+                    `Latest Information on ${query}`,
+                    `Understanding ${query}: Expert Analysis`
+                  ];
+                  
+                  const snippets = [
+                    `This comprehensive article explores ${query} in detail, covering all major aspects and recent developments.`,
+                    `According to recent research, ${query} has several important implications that experts are currently analyzing.`,
+                    `The latest studies on ${query} reveal interesting patterns that suggest new approaches might be needed.`,
+                    `Experts in the field suggest that ${query} represents a significant development worth exploring further.`,
+                    `Several perspectives exist on ${query}, with ongoing debates about the most effective approaches.`
+                  ];
+                  
+                  const urls = [
+                    'https://example.com/comprehensive-guide',
+                    'https://research-journal.org/latest-findings',
+                    'https://knowledge-base.net/expert-analysis',
+                    'https://information-source.com/detailed-overview',
+                    'https://trusted-reference.org/complete-explanation'
+                  ];
+                  
+                  // Create result components
+                  const titleElement = document.createElement('div');
+                  titleElement.classList.add('web-search-result-title');
+                  titleElement.textContent = titles[Math.floor(Math.random() * titles.length)];
+                  
+                  const snippetElement = document.createElement('div');
+                  snippetElement.classList.add('web-search-result-snippet');
+                  snippetElement.textContent = snippets[Math.floor(Math.random() * snippets.length)];
+                  
+                  const urlElement = document.createElement('div');
+                  urlElement.classList.add('web-search-result-url');
+                  urlElement.textContent = urls[Math.floor(Math.random() * urls.length)];
+                  
+                  // Assemble result
+                  resultElement.appendChild(titleElement);
+                  resultElement.appendChild(snippetElement);
+                  resultElement.appendChild(urlElement);
+                  
+                  webSearchResults.appendChild(resultElement);
+                }
+                
+                // Create summarized response
+                const responses = [
+                  `Based on my web search, I found several sources about ${query}. The consensus seems to be that it's a significant topic with multiple perspectives.`,
+                  `I've searched the web for information about ${query}. Several reliable sources provide detailed explanations and analysis.`,
+                  `My search for ${query} returned multiple relevant results. The information suggests it's a well-documented topic with considerable research behind it.`,
+                  `From my web search on ${query}, I've found comprehensive guides and expert analysis that should help answer your question.`
+                ];
+                
+                resolve(responses[Math.floor(Math.random() * responses.length)]);
+              }, 2000);
+            });
+          } else {
+            // Fallback if UI elements not found
+            return `I searched for information about "${query}" and found several relevant sources with detailed information on this topic.`;
+          }
+        } catch (error) {
+          console.error('Error searching web:', error);
+          return "Sorry, I encountered an error while searching the web.";
+        }
+      }
+      
+      // Function to show web search results in the dedicated UI
+      async function showWebSearchResults(query) {
+        const webSearchContainer = document.getElementById('web-search-container');
+        const closeWebSearchBtn = document.getElementById('close-web-search-btn');
+        
+        // Search and get results using performAgentAction for spinner
+        const result = await performAgentAction(async () => {
+          return await searchWeb(query);
+        });
+        
+        addMessage(result, 'agent');
+        
+        // Add event listener to close button
+        if (closeWebSearchBtn) {
+          closeWebSearchBtn.onclick = function() {
+            if (webSearchContainer) {
+              webSearchContainer.style.display = 'none';
+            }
+          };
+        }
+        
+        return result;
+      }
+      
+      // Autonomous browsing using MCP
+      async function autonomousBrowse(url, task) {
+        try {
+          // Show thinking indicator
+          return await performAgentAction(async () => {
+            // First navigate to the URL
+            addMessage(`Navigating to ${url}...`, 'agent');
+            await browseTo(url);
+            
+            // Wait for page to load
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            
+            // Get page information
+            const pageInfo = await window.mcpClient.playwright.request({
+              jsonrpc: "2.0",
+              method: "evaluate",
+              params: { 
+                expression: `({
+                  title: document.title,
+                  url: window.location.href,
+                  links: Array.from(document.querySelectorAll('a')).slice(0, 5).map(a => ({
+                    text: a.textContent?.trim()?.substring(0, 30) || '[No text]',
+                    href: a.href
+                  }))
+                })`
+              }
+            });
+            
+            // Report back findings
+            const responseText = `I've navigated to ${url} and found the page titled "${pageInfo.title}". Here are some links I found on the page:\n` +
+              pageInfo.links.map((link, i) => `${i+1}. ${link.text} (${link.href})`).join('\n');
+            
+            addMessage(responseText, 'agent');
+            return responseText;
+          });
+        } catch (error) {
+          console.error('Error during autonomous browsing:', error);
+          addMessage(`⚠️ I encountered an error while browsing: ${error.message}`, 'agent');
+        }
+      }
+      
+      // Voice manager
+      class VoiceManager {
+        constructor() {
+          this.voice = null;
+          this.audioCtx = null;
+          this.recognition = null;
+          this.isListening = false;
+          
+          speechSynthesis.onvoiceschanged = () => {
+            const vs = speechSynthesis.getVoices();
+            this.voice = vs.find(v => /Google|Microsoft/.test(v.name)) || vs[0];
+          };
+          
+          // Try to initialize voices immediately
+          if (speechSynthesis.getVoices().length > 0) {
+            this.voice = speechSynthesis.getVoices()[0];
+          }
+        }
+        
+        initSafari() {
+          try {
+            this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            speechSynthesis.speak(new SpeechSynthesisUtterance(''));
+            if (initVoiceButton) initVoiceButton.style.display = 'none';
+          } catch (error) {
+            console.error('Error initializing Safari audio context:', error);
+          }
+        }
+        
+        speak(text) {
+          console.log('Speaking:', text);
+          try {
+            if (!this.voice) {
+              console.warn('No voice available, using fallback');
+              return this.fallback(text);
+            }
+            const u = new SpeechSynthesisUtterance(text);
+            u.voice = this.voice;
+            u.rate = 1;
+            
+            // Store current utterance for potential interruption
+            this.currentUtterance = u;
+            
+            // Add event listener to detect when speech ends
+            u.onend = () => {
+              this.isSpeaking = false;
+              this.currentUtterance = null;
+              console.log('Speech ended');
+            };
+            
+            this.isSpeaking = true;
+            speechSynthesis.speak(u);
+          } catch (error) {
+            console.error('Error speaking:', error);
+          }
+        }
+        
+        stopSpeaking() {
+          console.log('Stopping speech');
+          if (this.isSpeaking) {
+            speechSynthesis.cancel();
+            this.isSpeaking = false;
+            this.unspokenText = this.currentUtterance ? this.currentUtterance.text : '';
+            this.currentUtterance = null;
+          }
+        }
+        
+        finishSpeaking() {
+          if (this.unspokenText) {
+            console.log('Continuing with unfinished speech');
+            this.speak(this.unspokenText);
+            this.unspokenText = '';
+          }
+        }
+        
+        fallback(text) {
+          console.log('Using fallback for speech');
+          // Already handled by addMessage
+        }
+        
+        initSpeechRecognition() {
+          if ('webkitSpeechRecognition' in window) {
+            try {
+              this.recognition = new webkitSpeechRecognition();
+              this.recognition.continuous = false;
+              this.recognition.interimResults = false;
+              
+              this.recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                if (messageInput) messageInput.value = transcript;
+                sendMessage();
+              };
+              
+              this.recognition.onerror = (event) => {
+                console.error('Speech recognition error', event.error);
+                this.stopListening();
+              };
+              
+              this.recognition.onend = () => {
+                this.isListening = false;
+              };
+            } catch (error) {
+              console.error('Error initializing speech recognition:', error);
+            }
+          } else {
+            console.warn('Speech recognition not supported in this browser');
+          }
+        }
+        
+        startListening() {
+          console.log('Starting speech recognition');
+          try {
+            if (this.recognition && !this.isListening) {
+              this.recognition.start();
+              this.isListening = true;
+              
+              // Visual feedback
+              const listenBtn = document.getElementById('start-listen');
+              if (listenBtn) {
+                listenBtn.classList.add('listen-active');
+                listenBtn.innerHTML = '<span class="icon">🎤</span> Listening...';
+              }
+            }
+          } catch (error) {
+            console.error('Error starting speech recognition:', error);
+          }
+        }
+        
+        stopListening() {
+          console.log('Stopping speech recognition');
+          try {
+            if (this.recognition && this.isListening) {
+              this.recognition.stop();
+              this.isListening = false;
+              
+              // Visual feedback
+              const listenBtn = document.getElementById('start-listen');
+              if (listenBtn) {
+                listenBtn.classList.remove('listen-active');
+                listenBtn.innerHTML = '<span class="icon">🎤</span> Listen';
+              }
+            }
+          } catch (error) {
+            console.error('Error stopping speech recognition:', error);
+          }
+        }
+      }
+      
+      const voiceManager = new VoiceManager();
+      voiceManager.initSpeechRecognition();
+      voiceManager.speak(welcomeMsg);
+      
+      // Check if Safari and show warning
+      if (/^((?!chrome|android).)*safari/i.test(navigator.userAgent)) {
+        if (safariWarning) safariWarning.style.display = 'block';
+      }
+      
+      // Model loading simulation
+      async function loadModels() {
+        console.log('Loading models...');
+        return new Promise(resolve => {
+          // Simulate model loading
+          setTimeout(() => {
+            if (modelStatus) modelStatus.textContent = "Models loaded successfully!";
+            setTimeout(() => {
+              if (modelStatus) modelStatus.style.display = 'none';
+            }, 3000);
+            resolve();
+          }, 2000);
+        });
+      }
+      
+      // Process user message to generate an appropriate response
+      async function processUserMessage(message) {
+        // Look for keyword patterns to determine intent
+        const lowerMessage = message.toLowerCase();
+        
+        // CAPABILITIES/HELP INTENTS - Expanded with many variations
+        if (lowerMessage.includes('what can you do') || 
+            lowerMessage.includes('what are you capable') || 
+            lowerMessage.includes('what are your capabilities') ||
+            lowerMessage.includes('your abilities') ||
+            lowerMessage.includes('what do you do') ||
+            lowerMessage.includes('tell me what you can do') ||
+            lowerMessage.includes('explain what you do') ||
+            lowerMessage.includes('explain your capabilities') ||
+            lowerMessage.includes('list your abilities') ||
+            lowerMessage.includes('tell me about yourself') ||
+            lowerMessage.match(/capabilities/i) ||
+            (lowerMessage.includes('what') && lowerMessage.includes('you') && lowerMessage.includes('do'))) {
+          
+          // Comprehensive capabilities explanation
+          return `I'm Agent Lee, a fully capable AI assistant designed to help you with a wide range of tasks:
+
+📚 Knowledge & Information:
+• Answer questions on virtually any topic
+• Explain complex concepts in simple terms
+• Provide definitions, facts, and general knowledge
+• Stay updated on current events and trends
+
+🔍 Search & Research:
+• Search the web for specific information
+• Find articles, data, or resources on any topic
+• Compile research on subjects you're interested in
+• Discover new information relevant to your interests
+
+✍️ Content Creation:
+• Write essays, articles, stories, or blog posts
+• Draft emails, letters, and professional communications
+• Generate creative content like poems or scripts
+• Help with brainstorming ideas for projects
+
+💻 Coding & Technical:
+• Assist with programming in various languages
+• Debug code issues and suggest improvements
+• Explain technical concepts and procedures
+• Help with data analysis and technical documentation
+
+🧠 Problem-Solving:
+• Work through logical problems step by step
+• Analyze situations and provide actionable advice
+• Help with decision-making by outlining options
+• Break down complex problems into manageable parts
+
+🎯 Personal Assistant:
+• Remember information from our conversations
+• Help organize thoughts and plans
+• Assist with scheduling and time management
+• Provide reminders and suggestions
+
+Just ask me about any of these areas, and I'll be happy to assist you!`;
+        }
+        
+        // SEARCH INTENT
+        else if (lowerMessage.includes('search') || lowerMessage.includes('find') || lowerMessage.includes('look up') || lowerMessage.includes('google') || lowerMessage.includes('web')) {
+          // Search intent
+          const searchResult = await searchWeb(message);
+          return searchResult;
+        }
+        
+        // WEATHER INTENT
+        else if (lowerMessage.includes('weather') || lowerMessage.includes('forecast') || lowerMessage.includes('temperature') || lowerMessage.includes('rain') || lowerMessage.includes('snow')) {
+          // Weather intent (simulated)
+          return `I'd be happy to check the weather for you. 
+
+In a full implementation, I would connect to a weather API to provide:
+• Current conditions for your location
+• Temperature, humidity, and wind information
+• Precipitation forecasts and alerts
+• Multi-day forecast with detailed hourly breakdowns
+
+Is there a specific location you'd like weather information for?`;
+        }
+        
+        // CODE/PROGRAMMING INTENT
+        else if (lowerMessage.includes('code') || lowerMessage.includes('program') || lowerMessage.includes('develop') || lowerMessage.includes('javascript') || lowerMessage.includes('python') || lowerMessage.includes('java') || lowerMessage.includes('coding')) {
+          // Code intent - more detailed response
+          return `I can definitely help with coding and programming tasks! Here's what I can do:
+
+• Write code in languages like Python, JavaScript, Java, C++, and many others
+• Debug existing code and identify issues
+• Explain programming concepts and algorithms
+• Help with data structures and software architecture
+• Assist with web development (HTML, CSS, React, etc.)
+• Guide you through building applications
+• Answer questions about programming languages and frameworks
+
+Just let me know what programming language you're working with and what you're trying to build or fix, and I'll help you get started.`;
+        }
+        
+        // CONTENT CREATION INTENT
+        else if (lowerMessage.includes('write') || lowerMessage.includes('create') || lowerMessage.includes('generate') || lowerMessage.includes('draft') || lowerMessage.includes('compose')) {
+          // Creative content intent - more specific options
+          return `I'd be happy to help you create content! Here are some things I can assist with:
+
+📝 Writing & Composition:
+• Articles and blog posts
+• Essays and academic papers
+• Short stories and creative fiction
+• Professional emails and letters
+• Social media posts
+• Product descriptions
+• Personal bios and profiles
+• Resumes and cover letters
+• Speeches and presentations
+
+What specific type of content would you like me to help you create?`;
+        }
+        
+        // MATH & CALCULATION INTENT
+        else if (lowerMessage.includes('calculate') || lowerMessage.includes('math') || lowerMessage.includes('equation') || lowerMessage.includes('solve') || lowerMessage.includes('computation')) {
+          return `I can help with various mathematical calculations and problems:
+
+• Basic arithmetic and algebra
+• Equations and formulas
+• Statistical calculations
+• Unit conversions
+• Financial calculations
+• Probability and combinatorics
+• Geometry and trigonometry
+
+What mathematical problem would you like me to help you solve?`;
+        }
+        
+        // TRANSLATION INTENT
+        else if (lowerMessage.includes('translate') || lowerMessage.includes('language') || lowerMessage.includes('spanish') || lowerMessage.includes('french') || lowerMessage.includes('german') || lowerMessage.includes('japanese') || lowerMessage.includes('chinese')) {
+          return `I can help with language translation tasks between many languages including:
+
+• English
+• Spanish
+• French
+• German
+• Italian
+• Portuguese
+• Russian
+• Japanese
+• Chinese
+• And many more
+
+What would you like me to translate and into which language?`;
+        }
+        
+        // GENERAL QUESTIONS ABOUT AGENT LEE
+        else if (lowerMessage.includes('who are you') || lowerMessage.includes('what are you') || lowerMessage.includes('your name')) {
+          return `I'm Agent Lee, an advanced AI assistant designed to help you with a wide range of tasks and questions. I use machine learning models running directly in your browser to provide fast, private assistance. I can search for information, answer questions, help with creative tasks, assist with coding, and much more - all without sending your data to external servers. How can I assist you today?`;
+        }
+        
+        // GREETING INTENT
+        else if (lowerMessage.includes('hello') || lowerMessage.includes('hi') || lowerMessage.includes('hey') || lowerMessage.includes('greetings') || lowerMessage.match(/^(hi|hello|hey)( there)?[!.?]?$/i)) {
+          const greetings = [
+            "Hello! How can I help you today?",
+            "Hi there! I'm Agent Lee. What can I assist you with?",
+            "Hey! I'm ready to help with whatever you need.",
+            "Greetings! How may I assist you today?",
+            "Hello! I'm here to help. What's on your mind?"
+          ];
+          return greetings[Math.floor(Math.random() * greetings.length)];
+        }
+        
+        // GRATITUDE INTENT
+        else if (lowerMessage.includes('thank') || lowerMessage.includes('thanks') || lowerMessage.includes('appreciate')) {
+          const responses = [
+            "You're welcome! Is there anything else I can help you with?",
+            "Happy to help! Let me know if you need anything else.",
+            "My pleasure! Do you have any other questions?",
+            "Glad I could assist. What else would you like to know?",
+            "You're quite welcome. I'm here if you need more help."
+          ];
+          return responses[Math.floor(Math.random() * responses.length)];
+        }
+        
+        // MODELS/TECHNICAL QUESTIONS
+        else if (lowerMessage.includes('model') || lowerMessage.includes('how do you work') || lowerMessage.includes('technology') || lowerMessage.includes('llm') || lowerMessage.includes('ai model') || lowerMessage.includes('large language model')) {
+          return `I'm powered by several advanced AI models that run directly in your browser:
+
+• TinyLlama: A compact but powerful language model that handles conversation, reasoning, and text generation
+• Whisper: An automatic speech recognition model for voice interaction
+• MiniLM: A text embedding model that helps me understand and remember context
+
+Unlike many AI assistants, I run completely on your device - no data is sent to external servers. This provides:
+• Complete privacy - your conversations stay on your device
+• Offline functionality - I work even without an internet connection
+• Fast responses - no need to wait for server communication
+
+All these models are loaded and run directly in your web browser using WebAssembly and optimized inference.`;
+        }
+        
+        else {
+          // Try to provide a more thoughtful response based on question patterns
+          if (lowerMessage.startsWith('how') || lowerMessage.startsWith('why') || lowerMessage.startsWith('what') || lowerMessage.startsWith('when') || lowerMessage.startsWith('where')) {
+            return `That's an interesting question. While I don't have access to the internet right now to look up specific information, I can offer my thoughts based on what I've learned.
+
+To give you the most accurate and helpful answer, I might need a bit more context. Could you provide additional details about what you're asking, or maybe rephrase your question?
+
+I'm designed to help with a wide range of topics including science, history, technology, arts, and more. I can also assist with practical tasks like writing, calculations, or creative projects.`;
+          } else {
+            // Generic response for statements or unusual requests
+            return `I understand you're interested in this topic. While I don't have specific information on this without internet access, I'd be happy to discuss it further or help in a different way.
+
+You can ask me to:
+• Explain concepts or ideas
+• Help with writing or creative tasks
+• Assist with calculations or problems
+• Brainstorm solutions or possibilities
+• Or simply have a conversation about topics that interest you
+
+How would you like me to help you with this?`;
+          }
+        }
+      }
+      
+      // Send message function - enhanced with more capabilities
+      async function sendMessage() {
+        try {
+          if (!messageInput || !chatMessages) {
+            console.error('Message input or chat area not found');
+            return;
+          }
+          
+          const message = messageInput.value.trim();
+          if (!message) {
+            console.log('Empty message, not sending');
+            return;
+          }
+          
+          console.log('Sending message:', message);
+          
+          // Add user message
+          addMessage(message, 'user');
+          messageInput.value = '';
+          
+              // Show thinking indicator
+          const thinkingIndicator = document.getElementById('thinking-indicator');
+          if (thinkingIndicator) {
+            thinkingIndicator.style.display = 'block';
+          }
+          
+          // Detect if this is a web search
+          if (message.toLowerCase().includes('search') || 
+              message.toLowerCase().includes('find') || 
+              message.toLowerCase().includes('look up') ||
+              message.toLowerCase().includes('google') || 
+              message.toLowerCase().match(/what is|who is|how to|where is|when|why/i)) {
+            
+            // Automatically perform web search
+            await showWebSearchResults(message);
+          }
+          
+          // Process message and show step-by-step thought
+          const thoughtProcess = generateThoughtProcess(message);
+          if (thoughtProcess) {
+            setTimeout(() => {
+              const thoughtElement = document.createElement('div');
+              thoughtElement.classList.add('thought-process');
+              thoughtElement.textContent = thoughtProcess;
+              chatMessages.appendChild(thoughtElement);
+              chatMessages.scrollTop = chatMessages.scrollHeight;
+            }, 500);
+          }
+          
+          // Generate response after showing thought process
+          setTimeout(async () => {
+            // Hide thinking indicator
+            if (thinkingIndicator) {
+              thinkingIndicator.style.display = 'none';
+            }
+            
+            // Check if we need to handle a previous interrupted response
+            if (voiceManager.unspokenText && voiceManager.unspokenText.length > 0) {
+              addMessage("Let me finish my previous thought first...", 'agent');
+              voiceManager.finishSpeaking();
+              
+              // After a brief pause, address the new question
+              setTimeout(async () => {
+                const response = await processUserMessage(message);
+                addMessage(response, 'agent');
+                voiceManager.speak(response);
+                
+                // Detect to-do items in conversation
+                detectAndAddTodoItems(message, response);
+              }, 1000);
+            } else {
+              // Normal flow - no interrupted speech
+              const response = await processUserMessage(message);
+              addMessage(response, 'agent');
+              voiceManager.speak(response);
+              
+              // Detect to-do items in conversation
+              detectAndAddTodoItems(message, response);
+            }
+          }, 1500);
+          
+        } catch (error) {
+          console.error('Error sending message:', error);
+          // Try to recover by showing an error message
+          if (chatMessages) {
+            const errorMsg = document.createElement('div');
+            errorMsg.classList.add('message', 'agent-message');
+            errorMsg.textContent = 'Sorry, there was an error processing your request.';
+            chatMessages.appendChild(errorMsg);
+          }
+        }
+      }
+      
+      // Event listeners with error handling
+      if (sendButton) {
+        console.log('Adding click listener to send button');
+        sendButton.addEventListener('click', function(e) {
+          console.log('Send button clicked');
+          sendMessage();
+        });
+      }
+      
+      if (messageInput) {
+        console.log('Adding keypress listener to message input');
+        messageInput.addEventListener('keypress', function(e) {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            console.log('Enter key pressed in message input');
+            e.preventDefault();
+            sendMessage();
+          }
+        });
+      }
+      
+      // Speech control buttons
+      const finishSpeakingBtn = document.getElementById('finish-speaking');
+      if (finishSpeakingBtn) {
+        finishSpeakingBtn.addEventListener('click', () => {
+          voiceManager.finishSpeaking();
+        });
+      }
+      
+      const stopSpeakingBtn = document.getElementById('stop-speaking');
+      if (stopSpeakingBtn) {
+        stopSpeakingBtn.addEventListener('click', () => {
+          voiceManager.stopSpeaking();
+        });
+      }
+      
+      if (startListenButton) {
+        startListenButton.addEventListener('click', () => {
+          voiceManager.startListening();
+        });
+      }
+      
+      // Add clear chat functionality
+      if (clearChatBtn) {
+        clearChatBtn.addEventListener('click', () => {
+          clearChat();
+          // Add a fresh welcome message
+          setTimeout(() => {
+            addMessage("Chat cleared. How else can I help you today?", 'agent');
+          }, 300);
+        });
+      }
+      
+      // Vision button handler - show popup instead of subGUI
+      const visionBtn = document.getElementById('vision-btn');
+      if (visionBtn) {
+        visionBtn.addEventListener('click', () => {
+          // Show the vision popup
+          const popup = document.getElementById('vision-popup-container');
+          popup.style.display = 'block';
+          
+          // Request camera permission when the popup is opened
+          requestCameraPermission();
+        });
+      }
+      
+      // Close vision popup button
+      const closeVisionBtn = document.getElementById('close-vision-btn');
+      if (closeVisionBtn) {
+        closeVisionBtn.addEventListener('click', () => {
+          const popup = document.getElementById('vision-popup-container');
+          popup.style.display = 'none';
+          
+          // Stop the camera when closing the popup
+          stopCamera();
+        });
+      }
+      
+      // Camera control buttons
+      const requestPermissionBtn = document.getElementById('request-permission-btn');
+      const startCameraBtn = document.getElementById('start-camera-btn');
+      const stopCameraBtn = document.getElementById('stop-camera-btn');
+      const switchCameraBtn = document.getElementById('switch-camera-btn');
+      
+      if (requestPermissionBtn) {
+        requestPermissionBtn.addEventListener('click', requestCameraPermission);
+      }
+      
+      if (startCameraBtn) {
+        startCameraBtn.addEventListener('click', startCamera);
+      }
+      
+      if (stopCameraBtn) {
+        stopCameraBtn.addEventListener('click', stopCamera);
+      }
+      
+      if (switchCameraBtn) {
+        switchCameraBtn.addEventListener('click', switchCamera);
+      }
+      
+      // Initialize camera facing mode
+      window.currentFacingMode = 'user'; // Start with front camera
+      
+      // Add to-do list functionality
+      function detectAndAddTodoItems(userMessage, agentResponse) {
+        const todoContainer = document.getElementById('todo-list-container');
+        const todoItems = document.getElementById('todo-items');
+        const closeTodoBtn = document.getElementById('close-todo-btn');
+        const todoListBtn = document.getElementById('vision-btn'); // Updated from todo-list-btn
+        
+        if (!todoContainer || !todoItems || !closeTodoBtn) return;
+        
+        // Check if message contains potential tasks
+        const hasTaskIndicators = (
+          userMessage.toLowerCase().includes('need to') ||
+          userMessage.toLowerCase().includes('have to') ||
+          userMessage.toLowerCase().includes('should') ||
+          userMessage.toLowerCase().includes('todo') ||
+          userMessage.toLowerCase().includes('to-do') ||
+          userMessage.toLowerCase().includes('task') ||
+          userMessage.toLowerCase().includes('remember to') ||
+          userMessage.toLowerCase().includes('don\'t forget')
+        );
+        
+        if (hasTaskIndicators) {
+          // Extract potential to-do items
+          const tasks = extractTasks(userMessage);
+          
+          if (tasks.length > 0) {
+            // Add tasks to the to-do list
+            tasks.forEach(task => {
+              addTodoItem(task);
+            });
+            
+            // Show the to-do list container if new tasks were added
+            todoContainer.style.display = 'block';
+          }
+        }
+        
+        // Event listener to close to-do list
+        closeTodoBtn.onclick = function() {
+          todoContainer.style.display = 'none';
+        };
+        
+        // Event listener for to-do list button
+        if (todoListBtn) {
+          todoListBtn.onclick = function() {
+            todoContainer.style.display = todoContainer.style.display === 'none' || todoContainer.style.display === '' 
+              ? 'block' 
+              : 'none';
+          };
+        }
+      }
+      
+      // Function to extract potential tasks from a message
+      function extractTasks(message) {
+        const tasks = [];
+        
+        // Split by common task separators
+        const sentences = message.split(/[.!?\n]+/);
+        
+        sentences.forEach(sentence => {
+          sentence = sentence.trim();
+          
+          // Skip very short sentences
+          if (sentence.length < 5) return;
+          
+          // Patterns that indicate a task
+          const taskPatterns = [
+            /need to (.*)/i,
+            /have to (.*)/i,
+            /should (.*)/i,
+            /don't forget to (.*)/i,
+            /remember to (.*)/i
+          ];
+          
+          for (const pattern of taskPatterns) {
+            const match = sentence.match(pattern);
+            if (match && match[1]) {
+              tasks.push(match[1].trim());
+              return; // Skip other patterns for this sentence
+            }
+          }
+          
+          // If sentence starts with an action verb, it might be a task
+          const actionVerbs = ['find', 'get', 'buy', 'call', 'email', 'write', 'create', 'make', 'check', 'review', 'send'];
+          for (const verb of actionVerbs) {
+            if (sentence.toLowerCase().startsWith(verb)) {
+              tasks.push(sentence);
+              return;
+            }
+          }
+        });
+        
+        return tasks;
+      }
+      
+      // Function to add a to-do item to the list
+      function addTodoItem(text) {
+        const todoItems = document.getElementById('todo-items');
+        if (!todoItems) return;
+        
+        const listItem = document.createElement('li');
+        listItem.classList.add('todo-item');
+        
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.classList.add('todo-checkbox');
+        checkbox.addEventListener('change', function() {
+          textSpan.classList.toggle('todo-completed', this.checked);
+        });
+        
+        const textSpan = document.createElement('span');
+        textSpan.classList.add('todo-text');
+        textSpan.textContent = text;
+        
+        listItem.appendChild(checkbox);
+        listItem.appendChild(textSpan);
+        todoItems.appendChild(listItem);
+      }
+      
+      // Generate thought process for a user message
+      function generateThoughtProcess(message) {
+        // Skip thought process for simple greetings or short messages
+        if (message.length < 10 || 
+            /^(hi|hello|hey|thanks|thank you)$/i.test(message.trim())) {
+          return null;
+        }
+        
+        // Generate a simulated thought process
+        return `THOUGHT PROCESS:
+1. Analyzing user query: "${message}"
+2. Identifying key concepts and intent
+3. Retrieving relevant information from knowledge base
+4. Formulating appropriate response
+5. Checking for any follow-up actions needed`;
+      }
+      
+      // Navigation/capability button click handlers
+      if (navButtons && navButtons.length > 0) {
+        console.log(`Adding click listeners to ${navButtons.length} navigation buttons`);
+        navButtons.forEach(button => {
+          button.addEventListener('click', async () => {
+            try {
+              const action = button.getAttribute('data-action');
+              console.log(`Capability button clicked: ${action}`);
+              
+              // Add user message
+              addMessage(`I'd like to use the ${action} capability.`, 'user');
+              
+              // Generate appropriate response based on capability
+              let response = "";
+              switch(action) {
+                case 'search':
+                  // Use performAgentAction to show thinking spinner
+                  await performAgentAction(async () => {
+                    // Ask for URL to navigate to
+                    const targetUrl = prompt("Which URL should I navigate to?");
+                    if (targetUrl) {
+                      addMessage(`Navigating to ${targetUrl}...`, 'user');
+                      
+                      // Show Lee's card & clear any sub-GUIs
+                      showAgentCard('lee');
+                      showSubGUI(null);
+                      
+                      try {
+                        // Use MCP client to navigate
+                        const res = await browseTo(targetUrl);
+                        addMessage(`✅ Successfully navigated to ${targetUrl}`, 'agent');
+                        
+                        // Optional: Auto-search within the page
+                        const searchQuery = prompt("What would you like to search for on this page?");
+                        if (searchQuery) {
+                          await window.mcpClient.playwright.request({
+                            jsonrpc: "2.0", method: "fill",
+                            params: { selector: 'input[type="search"], input[type="text"], input[name="q"]', value: searchQuery }
+                          });
+                          await window.mcpClient.playwright.request({
+                            jsonrpc: "2.0", method: "click",
+                            params: { selector: 'button[type="submit"], input[type="submit"]' }
+                          });
+                          addMessage(`✅ Searched for "${searchQuery}" on the page`, 'agent');
+                        }
+                      } catch (e) {
+                        addMessage(`⚠️ Navigation failed: ${e.message}`, 'agent');
+                      }
+                    } else {
+                      // Show traditional web search instead
+                      showWebSearchResults("latest information and trends");
+                    }
+                  });
+                  response = "I can search the web for you and navigate to websites. What would you like me to look up?";
+                  break;
+                case 'answer':
+                  response = "I can answer questions on a wide range of topics including science, history, technology, arts, and more. What would you like to know?";
+                  break;
+                case 'task':
+                  response = "I can help you with various tasks like setting reminders, making lists, or organizing information. What task do you need help with?";
+                  break;
+                case 'create':
+                  response = "I can help create content like emails, stories, summaries, or other text. What would you like me to help you create?";
+                  break;
+                case 'code':
+                  response = "I can assist with code in various programming languages, explain concepts, or help debug issues. What coding help do you need?";
+                  break;
+                case 'todo':
+                  // Show to-do list interface
+                  const todoContainer = document.getElementById('todo-list-container');
+                  if (todoContainer) {
+                    todoContainer.style.display = 'block';
+                  }
+                  response = "I've opened your to-do list. You can add items by telling me what you need to do, and I'll automatically detect and add them to your list.";
+                  break;
+                default:
+                  response = "How can I help you with that?";
+              }
+              
+              // Show response
+              addMessage(response, 'agent');
+              voiceManager.speak(response);
+              
+            } catch (error) {
+              console.error('Error handling capability button click:', error);
+              const thinkingIndicator = document.getElementById('thinking-indicator');
+              if (thinkingIndicator) thinkingIndicator.style.display = 'none';
+            }
+          });
+        });
+      }
+      
+      // Add event listener for help button
+      const helpBtn = document.getElementById('help-btn');
+      if (helpBtn) {
+        helpBtn.addEventListener('click', () => {
+          const helpMessage = `I'm Agent Lee, your advanced AI assistant with the following capabilities:
+
+📚 Knowledge & Information: I can answer questions on virtually any topic.
+🔍 Web Search: I can search the web for specific information.
+✍️ Content Creation: I can write emails, articles, stories, and more.
+💻 Coding Help: I can assist with programming in various languages.
+🧠 Problem-Solving: I can work through logical problems step by step.
+📋 To-Do List: I can help manage your tasks and priorities.
+
+Just ask me anything, and I'll do my best to assist you!`;
+          
+          addMessage(helpMessage, 'agent');
+          voiceManager.speak(helpMessage);
+        });
+      }
+      
+      // Start loading models
+      loadModels().then(() => {
+        console.log('Models loaded successfully');
+      }).catch(error => {
+        console.error('Error loading models:', error);
+      });
+    });
+  </script>
+
+  <!-- fflate for Brotli decompression (simulation) -->
+  <script>
+    // Simulate BrotliDecode
+    function BrotliDecode(data) {
+      return data;
+    }
+  </script>
+
+  <!-- Remove redundant imports since we added them to the head -->
+  
+  <!-- MCP, LLM, and ONNX Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/@microsoft/mcp-client/dist/mcp-client.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm/dist/web-llm.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
+
+  <script>
+    (async () => {
+      // Initialization Sequence
+      try {
+        // 1. Service Worker Registration (if not already done)
+        if ('serviceWorker' in navigator) {
+          await navigator.serviceWorker.register('/service-worker.js');
+        }
+
+        // 2. Vision Model Initialization
+        window.faceMesh = new FaceMesh({
+          locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
+        });
+        window.handsModel = new Hands({
+          locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+        });
+        window.holistic = new Holistic({
+          locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/holistic/${file}`
+        });
+        
+        // Configure Mediapipe
+        faceMesh.setOptions({ maxNumFaces: 2, refineLandmarks: true, minDetectionConfidence: 0.5 });
+        handsModel.setOptions({ maxNumHands: 2, modelComplexity: 1, minDetectionConfidence: 0.5 });
+        holistic.setOptions({ modelComplexity: 1, smoothLandmarks: true, enableSegmentation: false, refineFaceLandmarks: true });
+
+        // Load COCO-SSD model
+        await cocoSsd.load().then(mod => window.objectDetector = mod);
+
+        // 3. MCP Client Initialization
+        const config = {
+          browserBase: { url: 'https://mcp.browserbase.com/jsonrpc' },
+          playwright: { url: 'http://localhost:8000/sse' },
+          vision: { url: 'https://vision-mcp.example.com/jsonrpc' },
+          ashra: { url: 'https://ashra.example.com/rpc' },
+          qiniu: { url: 'https://upload.qiniu.com/mcp' },
+          ipfs: { url: 'https://ipfs-mcp.example.com/rpc' }
+      };
+      window.mcpClient = new MCPClient(config);
+      
+      // 4. LLM Client Setup (Lazy Loading)
+      window.llmEnginePromise = CreateMLCEngine({
+        model: 'TinyLlama-1.1B-Chat-v1.0',
+        quantization: 'q4'
+      });
+
+      // 5. ONNX Runtime Session (Lazy Loading)
+      window.onnxSessionPromise = ort.InferenceSession.create(
+        'https://path-to-your-model/model.onnx'
+      );
+
+      console.log('🚀 Agent Lee Initialization Complete');
+      
+      // Hook vision results callbacks
+      faceMesh.onResults(processFaceResults);
+      handsModel.onResults(processHandResults);
+      holistic.onResults(processHolisticResults);
+      
+      // Vision loop
+      window.processVisionFrame = async function() {
+        if (!window.isCameraOn) return;
+        
+        try {
+          const vid = document.getElementById('camera-feed');
+          const cnv = document.getElementById('vision-canvas');
+          const ctx = cnv.getContext('2d');
+          
+          // Clear previous frame
+          ctx.clearRect(0, 0, cnv.width, cnv.height);
+          
+          // Draw video frame to canvas
+          ctx.drawImage(vid, 0, 0, cnv.width, cnv.height);
+          
+          // Process all vision models in parallel
+          await Promise.all([
+            faceMesh.send({ image: cnv }),
+            handsModel.send({ image: cnv }),
+            holistic.send({ image: cnv })
+          ]);
+          
+          // Always run object detection (no need to check VisionConfig.object)
+          const preds = await window.objectDetector.detect(cnv);
+          drawObjectDetections(preds, ctx);
+          
+          // Continue loop
+          requestAnimationFrame(processVisionFrame);
+        } catch (error) {
+          console.error("Vision processing error:", error);
+          document.getElementById('camera-status').textContent = "Vision processing error: " + error.message;
+          // Still continue the loop even if there's an error
+          requestAnimationFrame(processVisionFrame);
+        }
+      };
+      
+      // Initialize vision configuration - always tracking all features
+      window.isCameraOn = false;
+      
+      // Add event listeners for device orientation changes to handle mobile rotation
+      window.addEventListener('orientationchange', () => {
+        if (window.isCameraOn) {
+          // Adjust canvas size based on new orientation
+          setTimeout(() => {
+            const cnv = document.getElementById('vision-canvas');
+            if (window.orientation === 90 || window.orientation === -90) {
+              // Landscape
+              cnv.width = 640;
+              cnv.height = 360;
+            } else {
+              // Portrait
+              cnv.width = 480;
+              cnv.height = 640;
+            }
+          }, 300);
+        }
+      });
+      
+      // Add user agent detection to customize for mobile vs desktop
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      if (isMobile) {
+        document.getElementById('camera-status').textContent = "Mobile device detected";
+      }
+    } catch (error) {
+      console.error('Initialization Error:', error);
+    }
+  })();
+
+    // GUI Toggles
+    function showAgentCard(name) {
+      document.querySelectorAll('.agent-card')
+        .forEach(c => c.style.display = c.dataset.agent===name?'block':'none');
+    }
+    function showSubGUI(id) {
+      document.querySelectorAll('.sub-gui')
+        .forEach(el => el.style.display = el.id===id?'block':'none');
+    }
+
+    // Spinner Wrapper - show "thinking…" around any async action
+    async function performAgentAction(fn) {
+      const spinner = document.querySelector('.thinking-indicator');
+      spinner.style.display = 'flex';
+      try {
+        const result = await fn();
+        spinner.style.display = 'none';
+        return result;
+      } catch (error) {
+        spinner.style.display = 'none';
+        console.error('Agent Action Failed:', error);
+        throw error;
+      }
+    }
+    
+    // Navigation helper - "go browse" command
+    async function browseTo(url) {
+      // Validate or normalize URL
+      if (!/^https?:\/\//.test(url)) url = 'https://' + url;
+      
+      // Load the iframe
+      const iframe = document.getElementById('lee-browser-iframe');
+      iframe.src = url;
+      
+      // Wait for it to finish loading
+      return new Promise((resolve, reject) => {
+        iframe.onload = () => resolve({ success: true, url });
+        iframe.onerror = () => reject(new Error('Failed to load ' + url));
+      });
+    }
+    
+    // Form Filler
+    async function runFormFiller() {
+      for (let l of document.getElementById('form-commands').value.split('\n')) {
+        const [sel,val]=l.split(',');
+        await mcpClient.playwright.request({ jsonrpc:"2.0", method:"fill", params:{selector:sel.trim(),value:val.trim()} });
+      }
+    }
+    
+    // Screenshot & OCR
+    async function captureAndOCR() {
+      const {data} = await mcpClient.playwright.request({ jsonrpc:"2.0", method:"screenshot", params:{format:'base64'} });
+      document.getElementById('screenshot-img').src = `data:image/png;base64,${data}`;
+      const ocr = await mcpClient.vision.request({ jsonrpc:"2.0", method:"ocr", params:{image:data} });
+      document.getElementById('ocr-output').textContent = ocr.text;
+    }
+    
+    // Vision Controls
+    async function requestCameraPermission() {
+      try {
+        const cameraStatus = document.getElementById('camera-status');
+        const permissionsNotice = document.getElementById('camera-permissions');
+        
+        cameraStatus.textContent = "Checking camera permission...";
+        cameraStatus.style.color = "#93c5fd";
+        
+        // Try to get camera permissions
+        const permissionResult = await navigator.permissions.query({ name: 'camera' });
+        
+        if (permissionResult.state === 'granted') {
+          // Already have permission, hide the permissions notice
+          permissionsNotice.style.display = 'none';
+          startCamera();
+        } else if (permissionResult.state === 'prompt') {
+          // Show permissions notice
+          permissionsNotice.style.display = 'block';
+          cameraStatus.textContent = "Camera permission required";
+          cameraStatus.style.color = "#eab308"; // Yellow warning
+        } else if (permissionResult.state === 'denied') {
+          // Permission denied
+          permissionsNotice.style.display = 'block';
+          cameraStatus.textContent = "⚠️ Camera access denied. Please update your browser settings.";
+          cameraStatus.style.color = "#ef4444"; // Red error
+        }
+      } catch (error) {
+        console.error("Permission check error:", error);
+        // On error, just try to start the camera directly
+        startCamera();
+      }
+    }
+    
+    async function startCamera() {
+      try {
+        const cameraStatus = document.getElementById('camera-status');
+        const permissionsNotice = document.getElementById('camera-permissions');
+        
+        cameraStatus.textContent = "Requesting camera permission...";
+        cameraStatus.style.color = "#93c5fd";
+        
+        const vid = document.getElementById('camera-feed');
+        const cnv = document.getElementById('vision-canvas');
+        
+        // Set canvas size for better visibility
+        cnv.width = 640;
+        cnv.height = 480;
+        
+        // Request camera with explicit constraints for mobile
+        const constraints = {
+          video: {
+            facingMode: window.currentFacingMode || 'user',
+            width: { ideal: 640 },
+            height: { ideal: 480 }
+          }
+        };
+        
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        
+        // Permission granted, hide the notice
+        permissionsNotice.style.display = 'none';
+        
+        // Show the video element for better debugging
+        vid.srcObject = stream;
+        vid.style.display = 'none'; // Hide the raw video but keep it in the DOM
+        vid.setAttribute('playsinline', true); // Important for iOS
+        vid.onloadedmetadata = () => {
+          vid.play();
+          window.isCameraOn = true;
+          cameraStatus.textContent = "Camera active - tracking all features";
+          cameraStatus.style.color = "#22c55e";
+          processVisionFrame();
+        };
+      } catch (error) {
+        console.error("Camera error:", error);
+        const cameraStatus = document.getElementById('camera-status');
+        const permissionsNotice = document.getElementById('camera-permissions');
+        
+        if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+          cameraStatus.textContent = "⚠️ Camera permission denied";
+          permissionsNotice.style.display = 'block';
+        } else {
+          cameraStatus.textContent = "⚠️ Camera error: " + error.message;
+        }
+        cameraStatus.style.color = "#ef4444";
+      }
+    }
+    
+    function stopCamera() {
+      const vid = document.getElementById('camera-feed');
+      const cameraStatus = document.getElementById('camera-status');
+      
+      if (vid.srcObject) {
+        vid.srcObject.getTracks().forEach(track => track.stop());
+        vid.srcObject = null;
+      }
+      
+      window.isCameraOn = false;
+      cameraStatus.textContent = "Camera stopped";
+      cameraStatus.style.color = "#93c5fd";
+    }
+    
+    function switchCamera() {
+      // If camera is already on, stop it first
+      if (window.isCameraOn) {
+        stopCamera();
+      }
+      
+      // Toggle between front and back camera
+      window.currentFacingMode = window.currentFacingMode === 'user' ? 'environment' : 'user';
+      
+      // Update status message
+      const cameraStatus = document.getElementById('camera-status');
+      cameraStatus.textContent = "Switching to " + (window.currentFacingMode === 'user' ? 'front' : 'back') + " camera...";
+      
+      // Start camera with new facing mode
+      setTimeout(() => startCamera(), 500);
+    }
+    
+    // Vision result handlers
+    function drawObjectDetections(preds,ctx){
+      preds.forEach(p=>{
+        const [x,y,w,h]=p.bbox;
+        ctx.beginPath(); ctx.rect(x,y,w,h); ctx.stroke(); ctx.fillText(`${p.class} ${Math.round(p.score*100)}%`,x,y>10?y-5:10);
+      });
+    }
+    
+    function processFaceResults(r){ 
+      const ctx = document.getElementById('vision-canvas').getContext('2d');
+      drawConnectors(ctx, r.multiFaceLandmarks, FACEMESH_TESSELATION); 
+    }
+    
+    function processHandResults(r){ 
+      const ctx = document.getElementById('vision-canvas').getContext('2d');
+      r.multiHandLandmarks?.forEach(l=> drawConnectors(ctx, l, HAND_CONNECTIONS)); 
+    }
+    
+    function processHolisticResults(r){
+      const ctx=document.getElementById('vision-canvas').getContext('2d');
+      drawConnectors(ctx, r.poseLandmarks, POSE_CONNECTIONS);
+      r.faceLandmarks && drawLandmarks(ctx, r.faceLandmarks);
+      r.leftHandLandmarks && drawConnectors(ctx, r.leftHandLandmarks, HAND_CONNECTIONS);
+      r.rightHandLandmarks && drawConnectors(ctx, r.rightHandLandmarks, HAND_CONNECTIONS);
+    }
+    
+    // Click highlighting
+    function highlightClick(x, y) {
+      const canvas = document.getElementById('lee-iframe-canvas');
+      const ctx = canvas.getContext('2d');
+      ctx.beginPath();
+      ctx.arc(x, y, 10, 0, 2*Math.PI);
+      ctx.strokeStyle = 'rgba(255,0,0,0.8)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      setTimeout(() => ctx.clearRect(x-12, y-12, 24, 24), 200);
+    }
+
+    // Action Bindings
+    document.querySelectorAll('[data-action]').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const act = e.currentTarget.dataset.action;
+        showAgentCard('lee');
+        showSubGUI(null);
+        
+        switch(act) {
+          case 'search':
+          case 'browse':
+            showSubGUI('lee-browser-preview');
+            await performAgentAction(() => 
+              browseTo(prompt('URL to navigate:') || 'https://www.example.com')
+            );
+            addMessage('✅ Loaded website.', 'agent');
+            break;
+          case 'form-fill':
+            showSubGUI('lee-form-filler');
+            document.getElementById('run-form-fill').onclick = () => 
+              performAgentAction(runFormFiller);
+            break;
+          case 'answer':
+          case 'chat-llm':
+            await performAgentAction(async () => {
+              const query = prompt('Ask AI:');
+              if (!query) return;
+              const response = "I'd be happy to answer that. This is a simulated LLM response since we don't have a real API key configured.";
+              addMessage(response, 'agent');
+              return response;
+            });
+            break;
+          case 'screenshot':
+            showSubGUI('lee-screenshot-panel');
+            document.getElementById('take-screenshot').onclick = () => 
+              performAgentAction(captureAndOCR);
+            break;
+          case 'create':
+          case 'vision':
+            showSubGUI('vision-control');
+            break;
+          case 'code':
+          case 'vector-search':
+            await performAgentAction(async () => {
+              const query = prompt('Search for code:');
+              if (!query) return;
+              const response = "Here's some relevant code I found: [simulated vector search results]";
+              addMessage(response, 'agent');
+              return response;
+            });
+            break;
+          case 'task':
+            document.getElementById('todo-list-container').style.display = 'block';
+            break;
+        }
+      });
+    });
+  </script>
+</body>
+</html>

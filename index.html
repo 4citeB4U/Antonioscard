@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Antonio - Always Trucking & Loading LLC</title>
+<meta name="description" content="Digital business card for Antonio, Owner/Instructor at Always Trucking & Loading LLC - Trucking and CDL Training in Milwaukee, WI">
+<link rel="stylesheet" href="css/style.css">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+<!-- Logo Button (fixed top-left, large, with label) -->
+<div class="logo-btn-container">
+  <a href="http://alwaystruckingandloading.com/" class="logo-btn" target="_blank" title="Visit Our Website">
+    <img src="logo.png" alt="Always Trucking & Loading LLC Logo" class="logo-btn-img">
+  </a>
+  <span class="logo-btn-label">Visit Our Website</span>
+  <div class="lang-voice-selectors">
+    <label for="lang-select" class="lang-voice-label">🌐 Language:</label>
+    <select id="lang-select" class="lang-voice-select"></select>
+    <label for="voice-select" class="lang-voice-label">🗣️ Voice:</label>
+    <select id="voice-select" class="lang-voice-select"></select>
+  </div>
+</div>
+<!-- Background Layer for perfect fit -->
+<div class="background-image-layer"></div>
+<!-- Antonio's Business Card -->
+<div class="business-card-centered">
+  <div class="business-card-main">
+    <img src="screenshot_a669.png" alt="Antonio Business Card - Always Trucking & Loading LLC" class="card-image">
+    <div class="card-footer">
+      <button class="btn-share" onclick="shareCard()">
+        <i class="fas fa-share-alt"></i> Share Card
+      </button>
+      <button class="btn-agent-lee" id="agent-lee-trigger" title="Ask Agent Lee">
+        <img src="lmlz7zis45.png" alt="Agent Lee" style="width:28px;height:28px;border-radius:50%;vertical-align:middle;"> Agent Lee
+      </button>
+      <button class="btn-save" onclick="downloadVCard()">
+        <i class="fas fa-download"></i> Save Contact
+      </button>
+    </div>
+  </div>
+</div>
+<script src="js/script.js"></script>
+<script src="js/agent-lee.js"></script>
+</body>
+</html>
