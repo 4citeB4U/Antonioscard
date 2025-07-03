@@ -1,157 +1,171 @@
-// Function to share the business card
-function shareCard() {
-    // Check if Web Share API is supported
-    if (navigator.share) {
-        navigator.share({
-            title: 'Antonio - Always Trucking & Loading LLC',
-            text: 'Contact information for Antonio, Owner/Instructor at Always Trucking & Loading LLC',
-            url: 'http://alwaystruckingandloading.com'
-        })
-        .then(() => console.log('Successful share'))
-        .catch((error) => console.log('Error sharing:', error));
+// Business Card Functionality
+document.addEventListener('DOMContentLoaded', function() {
+  // Get elements
+  const saveContactBtn = document.getElementById('save-contact');
+  const showAgentBtn = document.getElementById('show-agent');
+  const agentWrapper = document.getElementById('agent-wrapper');
+  const closeAgentBtn = document.getElementById('close-agent');
+  const faqQuestions = document.querySelectorAll('.faq-question');
+  const agentNavBtns = document.querySelectorAll('.agent-nav-btn');
+  const businessCard = document.querySelector('.business-card');
+  
+  // Ensure card displays properly on different devices
+  function adjustCardDisplay() {
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
+    
+    // Calculate the proper image dimensions based on the viewport
+    if (windowWidth <= 767) {
+      // Mobile display
+      businessCard.style.width = '100%';
+      businessCard.style.height = '100vh';
+      businessCard.style.backgroundSize = 'contain';
+      businessCard.style.backgroundRepeat = 'no-repeat';
+      businessCard.style.backgroundPosition = 'center';
     } else {
-        // Fallback for browsers that don't support Web Share API
-        alert('Copy this link to share: ' + window.location.href);
+      // Desktop display
+      const imageAspectRatio = 0.5625; // 9:16 aspect ratio
+      
+      // Set height to 90% of viewport height
+      const desiredHeight = windowHeight * 0.9;
+      
+      // Calculate width based on aspect ratio
+      const desiredWidth = desiredHeight * imageAspectRatio;
+      
+      // Set dimensions
+      businessCard.style.height = `${desiredHeight}px`;
+      businessCard.style.width = `${desiredWidth}px`;
+      businessCard.style.backgroundSize = 'contain';
+      businessCard.style.backgroundRepeat = 'no-repeat';
+      businessCard.style.backgroundPosition = 'center';
     }
-}
-
-// Function to download vCard
-function downloadVCard() {
-    // Create vCard content
-    const vCardContent = `BEGIN:VCARD
-VERSION:3.0
-FN:Antonio
-TITLE:Owner/Instructor
-ORG:Always Trucking & Loading LLC
-TEL;TYPE=WORK,VOICE:(414) 239-9333
-TEL;TYPE=WORK,VOICE:(414) 982-7034
-EMAIL:Antonio@alwaystruckingandloading.com
-URL:http://alwaystruckingandloading.com
-ADR;TYPE=WORK:;;Milwaukee;WI;;;
-END:VCARD`;
-
-    // Create a blob and download link
-    const blob = new Blob([vCardContent], { type: 'text/vcard' });
+  }
+  
+  // Run on load and resize
+  adjustCardDisplay();
+  window.addEventListener('resize', adjustCardDisplay);
+  
+  // Save Contact functionality
+  saveContactBtn.addEventListener('click', function() {
+    const contact = {
+      name: "Antonio",
+      phoneNumbers: [
+        { type: "work", number: "1-800-362-6564" },
+        { type: "mobile", number: "414-982-7034" }
+      ],
+      email: "Antonio@alwaystruckinandloading.com"
+    };
+    
+    // Create vCard format
+    const vcard = createVCard(contact);
+    
+    // Create download
+    const blob = new Blob([vcard], { type: "text/vcard" });
     const url = URL.createObjectURL(blob);
     
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'antonio_contact.vcf';
+    link.download = "antonio_contact.vcf";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-}
-
-// Function to toggle QR Code visibility
-function toggleQRCode() {
-    const overlay = document.getElementById('qr-overlay');
-    const qrContainer = document.getElementById('qrcode');
-    
-    if (overlay.classList.contains('hidden')) {
-        // Show QR code
-        overlay.classList.remove('hidden');
-        setTimeout(() => {
-            overlay.classList.add('visible');
-        }, 10);
+  });
+  
+  // Show Agent Lee functionality
+  showAgentBtn.addEventListener('click', function() {
+    agentWrapper.style.display = 'block';
+    document.body.style.overflow = 'hidden'; // Prevent scrolling behind modal
+  });
+  
+  // Close Agent Lee when clicking the close button
+  closeAgentBtn.addEventListener('click', function() {
+    agentWrapper.style.display = 'none';
+    document.body.style.overflow = 'auto'; // Re-enable scrolling
+  });
+  
+  // Toggle FAQ answers when clicking on questions
+  faqQuestions.forEach(question => {
+    question.addEventListener('click', function() {
+      // Toggle active class on the question
+      this.classList.toggle('active');
+      
+      // Get the answer element (next sibling)
+      const answer = this.nextElementSibling;
+      
+      // Toggle show class on the answer
+      answer.classList.toggle('show');
+    });
+  });
+  
+  // Agent navigation buttons
+  agentNavBtns.forEach(btn => {
+    btn.addEventListener('click', function() {
+      const section = this.getAttribute('data-section');
+      
+      // Find all FAQ items related to this section
+      let sectionFAQs = [];
+      
+      switch(section) {
+        case 'services':
+          sectionFAQs = ['What services does Always Trucking and Loading offer?', 
+                         'Do you handle time-sensitive deliveries?',
+                         'What makes Always Trucking and Loading different from competitors?'];
+          break;
+        case 'locations':
+          sectionFAQs = ['What areas do you serve?'];
+          break;
+        case 'fleet':
+          sectionFAQs = ['What types of trucks are in your fleet?',
+                         'How do you handle specialized or oversized cargo?'];
+          break;
+        case 'contact':
+          sectionFAQs = ['How can I get a quote for transportation services?',
+                         'Are you licensed and insured?'];
+          break;
+      }
+      
+      // Highlight matching FAQs
+      faqQuestions.forEach(question => {
+        const questionText = question.textContent;
+        const answer = question.nextElementSibling;
         
-        // Generate QR code if it doesn't exist
-        if (qrContainer.innerHTML === '') {
-            generateQRCode();
+        if (sectionFAQs.some(faq => questionText.includes(faq))) {
+          // Open and highlight these FAQs
+          question.classList.add('active');
+          answer.classList.add('show');
+          
+          // Scroll to first matching FAQ
+          if (questionText.includes(sectionFAQs[0])) {
+            question.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        } else {
+          // Close other FAQs
+          question.classList.remove('active');
+          answer.classList.remove('show');
         }
-    } else {
-        // Hide QR code
-        overlay.classList.remove('visible');
-        setTimeout(() => {
-            overlay.classList.add('hidden');
-        }, 300);
-    }
-}
-
-// Function to generate QR Code
-function generateQRCode() {
-    const qrContainer = document.getElementById('qrcode');
-    
-    // Clear any existing content
-    qrContainer.innerHTML = '';
-    
-    // Create vCard data for QR code
-    const vCardData = `BEGIN:VCARD
-VERSION:3.0
-FN:Antonio
-TITLE:Owner/Instructor
-ORG:Always Trucking & Loading LLC
-TEL;TYPE=WORK,VOICE:(414) 239-9333
-TEL;TYPE=WORK,VOICE:(414) 982-7034
-EMAIL:Antonio@alwaystruckingandloading.com
-URL:http://alwaystruckingandloading.com
-ADR;TYPE=WORK:;;Milwaukee;WI;;;
-END:VCARD`;
-    
-    // Generate QR code
-    if (window.QRCode) {
-        new QRCode(qrContainer, {
-            text: vCardData,
-            width: 200,
-            height: 200,
-            colorDark: "#2c2c2c",
-            colorLight: "#ffffff",
-            correctLevel: QRCode.CorrectLevel.H
-        });
-    } else {
-        qrContainer.innerHTML = '<p>QR Code generator failed to load</p>';
-    }
-}
-
-// Add animations on load
-document.addEventListener('DOMContentLoaded', function() {
-    // Animate card entrance
-    const card = document.querySelector('.card-front');
-    card.style.opacity = '0';
-    card.style.transform = 'translateY(20px)';
-    
-    setTimeout(() => {
-        card.style.transition = 'opacity 0.8s ease, transform 0.8s ease';
-        card.style.opacity = '1';
-        card.style.transform = 'translateY(0)';
-    }, 200);
-    
-    // Stagger animate contact items
-    const contactItems = document.querySelectorAll('.contact-item');
-    contactItems.forEach((item, index) => {
-        item.style.opacity = '0';
-        item.style.transform = 'translateX(-10px)';
-        
-        setTimeout(() => {
-            item.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
-            item.style.opacity = '1';
-            item.style.transform = 'translateX(0)';
-        }, 500 + (index * 100));
+      });
     });
-    
-    // Animate social icons
-    const socialIcons = document.querySelectorAll('.social-icon');
-    socialIcons.forEach((icon, index) => {
-        icon.style.opacity = '0';
-        icon.style.transform = 'scale(0.8)';
-        
-        setTimeout(() => {
-            icon.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
-            icon.style.opacity = '1';
-            icon.style.transform = 'scale(1)';
-        }, 900 + (index * 100));
-    });
-    
-    // Animate service badges
-    const serviceBadges = document.querySelectorAll('.service-badge');
-    serviceBadges.forEach((badge, index) => {
-        badge.style.opacity = '0';
-        badge.style.transform = 'translateY(-5px)';
-        
-        setTimeout(() => {
-            badge.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
-            badge.style.opacity = '1';
-            badge.style.transform = 'translateY(0)';
-        }, 300 + (index * 100));
-    });
+  });
+  
+  // Make sure the agent wrapper starts hidden
+  agentWrapper.style.display = 'none';
 });
+
+// Function to create vCard format
+function createVCard(contact) {
+  let vcard = "BEGIN:VCARD\n";
+  vcard += "VERSION:3.0\n";
+  vcard += `FN:${contact.name}\n`;
+  vcard += `N:${contact.name};;;\n`;
+  
+  contact.phoneNumbers.forEach(phone => {
+    vcard += `TEL;TYPE=${phone.type.toUpperCase()}:${phone.number}\n`;
+  });
+  
+  vcard += `EMAIL:${contact.email}\n`;
+  vcard += `URL:https://alwaystruckingandloading.com\n`;
+  vcard += `ORG:Always Trucking and Loading LLC\n`;
+  vcard += "END:VCARD";
+  
+  return vcard;
+}

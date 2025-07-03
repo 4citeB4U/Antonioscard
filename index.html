@@ -1,45 +1,736 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Antonio - Always Trucking & Loading LLC</title>
-<meta name="description" content="Digital business card for Antonio, Owner/Instructor at Always Trucking & Loading LLC - Trucking and CDL Training in Milwaukee, WI">
-<link rel="stylesheet" href="css/style.css">
-<link rel="stylesheet" href="css/responsive-agent-lee.css">
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Antonio - Always Trucking & Loading</title>
+  <script src="https://cdn.tailwindcss.com/3.4.16"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap');
+    
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    
+    .business-card-bg {
+      background: linear-gradient(135deg, rgba(0,0,0,0.4), rgba(0,0,0,0.6)), url('bqtw0756ka.png');
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
+    }
+    
+    .card-style {
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .signature-font {
+      font-family: 'Playfair Display', serif;
+    }
+    
+    .pulse-glow {
+      animation: pulse-glow 2s infinite;
+    }
+    
+    @keyframes pulse-glow {
+      0%, 100% { box-shadow: 0 0 20px rgba(255, 255, 255, 0.3); }
+      50% { box-shadow: 0 0 40px rgba(255, 255, 255, 0.6); }
+    }
+    
+    .fade-in {
+      animation: fadeIn 1s ease-in-out;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .slide-in-left {
+      animation: slideInLeft 0.8s ease-out;
+    }
+    
+    @keyframes slideInLeft {
+      from { opacity: 0; transform: translateX(-50px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    
+    .slide-in-right {
+      animation: slideInRight 0.8s ease-out;
+    }
+    
+    @keyframes slideInRight {
+      from { opacity: 0; transform: translateX(50px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+  </style>
 </head>
-<body>
-<!-- Logo Button (fixed top-left, large, with label) -->
-<div class="logo-btn-container">
-  <a href="http://alwaystruckingandloading.com/" class="logo-btn" target="_blank" title="Visit Our Website">
-    <img src="logo.png" alt="Always Trucking & Loading LLC Logo" class="logo-btn-img large-logo">
-  </a>
-  <span class="logo-btn-label large-logo-label">Visit Our Website</span>
-  <div class="agent-lee-top">
-    <button class="btn-agent-lee glow" id="agent-lee-trigger-top" title="Ask Agent Lee">
-      <img src="lmlz7zis45.png" alt="Agent Lee" style="width:48px;height:48px;border-radius:50%;vertical-align:middle;"> <span class="agent-lee-btn-label">Agent Lee</span>
-    </button>
-  </div>
-</div>
-<!-- Background Layer for perfect fit -->
-<div class="background-image-layer"></div>
-<!-- Antonio's Business Card -->
-<div class="business-card-centered">
-  <div class="business-card-main">
-    <img src="screenshot_a669.png" alt="Antonio Business Card - Always Trucking & Loading LLC" class="card-image">
-    <div class="card-footer">
-      <button class="btn-share" onclick="shareCard()">
-        <i class="fas fa-share-alt"></i> Share Card
-      </button>
-      <button class="btn-save" onclick="downloadVCard()">
-        <i class="fas fa-download"></i> Save Contact
-      </button>
+<body class="bg-black text-white overflow-x-hidden">
+
+  <!-- Main Business Card Section -->
+  <section class="business-card-bg min-h-screen flex items-center justify-center relative">
+    <!-- Original Business Card Design -->
+    <div class="container mx-auto px-4 py-8">
+      <div class="max-w-md mx-auto card-style rounded-3xl p-8 text-center shadow-2xl fade-in">
+        <!-- Company Logo -->
+        <div class="mb-6">
+          <a href="https://alwaystruckingandloading.com" target="_blank" class="inline-block">
+            <img src="onbfvyra4s.png" alt="Always Trucking & Loading LLC" class="w-24 h-24 mx-auto rounded-full pulse-glow hover:scale-105 transition-transform">
+          </a>
+        </div>
+        
+        <!-- Est. 2019 -->
+        <div class="text-gray-300 text-sm mb-2 tracking-wider">EST. 2019</div>
+        
+        <!-- Company Name -->
+        <h1 class="signature-font text-3xl text-white mb-6 italic leading-tight">
+          Always Trucking<br>
+          <span class="text-2xl">&</span> Loading
+        </h1>
+        
+        <!-- Contact Person -->
+        <h2 class="text-4xl font-bold text-white mb-6">Antonio</h2>
+        
+        <!-- Phone Numbers -->
+        <div class="space-y-3 mb-6">
+          <a href="tel:18003626564" class="block text-2xl font-semibold text-white hover:text-yellow-300 transition-colors">
+            1-800-362-6564
+          </a>
+          <a href="mailto:Antonio@alwaystruckingandloading.com" class="block text-sm sm:text-lg text-blue-300 hover:text-blue-400 transition-colors font-medium bg-black/30 px-2 sm:px-4 py-2 rounded-lg mx-auto max-w-xs sm:max-w-md break-all">
+            Antonio@alwaystruckingandloading.com
+          </a>
+        </div>
+        
+        <!-- Action Buttons -->
+        <div class="flex flex-col space-y-3">
+          <button id="save-contact" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg transition-all transform hover:scale-105 shadow-lg">
+            💾 Save Contact
+          </button>
+          <button id="show-agent" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-all transform hover:scale-105 shadow-lg">
+            🤖 Show Agent Lee
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Scroll Indicator -->
+    <div class="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
+      <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+      </svg>
+    </div>
+  </section>
+
+  <!-- Extended Services Section -->
+  <section class="business-card-bg py-20">
+    <div class="container mx-auto px-4">
+      <!-- Services Header -->
+      <div class="text-center mb-16 slide-in-left">
+        <h2 class="signature-font text-4xl text-white mb-4 italic">Our Services</h2>
+        <p class="text-xl text-gray-300 max-w-3xl mx-auto">
+          Professional transportation solutions for all your heavy equipment, construction materials, and commercial freight needs
+        </p>
+      </div>
+      
+      <!-- Services Grid -->
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+        <div class="card-style rounded-xl p-6 text-center slide-in-left">
+          <div class="text-4xl mb-4">🚚</div>
+          <h3 class="text-xl font-bold text-white mb-3">Heavy Haul Transport</h3>
+          <p class="text-gray-300">Specialized equipment for moving oversized loads and heavy machinery safely.</p>
+        </div>
+        
+        <div class="card-style rounded-xl p-6 text-center fade-in">
+          <div class="text-4xl mb-4">🏗️</div>
+          <h3 class="text-xl font-bold text-white mb-3">Construction Materials</h3>
+          <p class="text-gray-300">Reliable delivery of construction materials and equipment to job sites.</p>
+        </div>
+        
+        <div class="card-style rounded-xl p-6 text-center slide-in-right">
+          <div class="text-4xl mb-4">📦</div>
+          <h3 class="text-xl font-bold text-white mb-3">Commercial Freight</h3>
+          <p class="text-gray-300">Full truckload and LTL shipping services for businesses of all sizes.</p>
+        </div>
+        
+        <div class="card-style rounded-xl p-6 text-center slide-in-left">
+          <div class="text-4xl mb-4">⚡</div>
+          <h3 class="text-xl font-bold text-white mb-3">Emergency Transport</h3>
+          <p class="text-gray-300">24/7 emergency transportation services for time-critical deliveries.</p>
+        </div>
+        
+        <div class="card-style rounded-xl p-6 text-center fade-in">
+          <div class="text-4xl mb-4">🗺️</div>
+          <h3 class="text-xl font-bold text-white mb-3">Nationwide Coverage</h3>
+          <p class="text-gray-300">From Milwaukee, Wisconsin to all 48 continental United States.</p>
+        </div>
+        
+        <div class="card-style rounded-xl p-6 text-center slide-in-right">
+          <div class="text-4xl mb-4">🛡️</div>
+          <h3 class="text-xl font-bold text-white mb-3">Fully Insured</h3>
+          <p class="text-gray-300">Comprehensive insurance coverage for your peace of mind.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Fleet Showcase -->
+  <section class="business-card-bg py-20">
+    <div class="container mx-auto px-4">
+      <div class="max-w-4xl mx-auto text-center slide-in-left">
+        <h2 class="signature-font text-4xl text-white mb-6 italic">Our Professional Fleet</h2>
+        <div class="card-style rounded-xl p-8 mb-8">
+          <img src="bqtw0756ka.png" alt="Always Trucking Fleet" class="w-full h-64 object-cover rounded-lg mb-6">
+          <h3 class="text-2xl font-bold text-white mb-4">Since 2019</h3>
+          <p class="text-lg text-gray-300 leading-relaxed">
+            Our modern fleet includes semis, flatbeds, specialized equipment transporters, and heavy haul trucks - 
+            all professionally maintained to ensure reliability and safety for every delivery.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- About Section -->
+  <section class="business-card-bg py-20">
+    <div class="container mx-auto px-4">
+      <div class="max-w-4xl mx-auto">
+        <div class="grid lg:grid-cols-2 gap-12 items-center">
+          <div class="slide-in-left">
+            <h2 class="signature-font text-4xl text-white mb-6 italic">About Always Trucking & Loading</h2>
+            <p class="text-lg text-gray-300 mb-6 leading-relaxed">
+              Since 2019, Always Trucking and Loading has been providing premier transportation and logistics services nationwide. 
+              Based in Milwaukee, Wisconsin, we specialize in safe, reliable, and on-time delivery.
+            </p>
+            <p class="text-lg text-gray-300 mb-8 leading-relaxed">
+              Our commitment to customer satisfaction and transportation excellence has made us an industry leader. 
+              We develop transportation plans tailored to your specific requirements.
+            </p>
+            <div class="space-y-4">
+              <div class="flex items-center">
+                <div class="bg-red-600 rounded-full p-2 mr-4">
+                  <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                  </svg>
+                </div>
+                <span class="text-lg font-medium text-white">Licensed, Bonded & Insured</span>
+              </div>
+              <div class="flex items-center">
+                <div class="bg-red-600 rounded-full p-2 mr-4">
+                  <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                  </svg>
+                </div>
+                <span class="text-lg font-medium text-white">Equal Opportunity Employer</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="slide-in-right">
+            <div class="card-style rounded-2xl p-8 text-center">
+              <a href="https://alwaystruckingandloading.com" target="_blank" class="inline-block mb-6">
+                <img src="onbfvyra4s.png" alt="Company Logo" class="w-32 h-32 mx-auto rounded-full pulse-glow hover:scale-105 transition-transform">
+              </a>
+              <h3 class="signature-font text-2xl text-white mb-2 italic">Est. 2019</h3>
+              <p class="text-gray-300 mb-6">Trusted by businesses nationwide</p>
+              <div class="bg-red-600 text-white rounded-lg p-4">
+                <p class="font-semibold text-lg">Ready to get started?</p>
+                <p class="text-sm opacity-90">Contact Antonio for a free quote today</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Contact Section -->
+  <section class="business-card-bg py-20">
+    <div class="container mx-auto px-4">
+      <div class="max-w-4xl mx-auto text-center fade-in">
+        <h2 class="signature-font text-4xl text-white mb-6 italic">Get In Touch</h2>
+        <p class="text-xl text-gray-300 mb-12">Ready to move your cargo? Contact Antonio today</p>
+        
+        <div class="grid md:grid-cols-3 gap-8 mb-12">
+          <div class="card-style rounded-xl p-6 text-center">
+            <div class="bg-red-600 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+              <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"></path>
+              </svg>
+            </div>
+            <h3 class="text-xl font-bold text-white mb-2">Call Us</h3>
+            <a href="tel:18003626564" class="text-lg text-gray-300 hover:text-yellow-300 transition-colors block mb-2">1-800-362-6564</a>
+            <p class="text-sm text-gray-400">Toll-free - available 24/7</p>
+
+          </div>
+          
+          <div class="card-style rounded-xl p-6 text-center">
+            <div class="bg-red-600 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+              <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"></path>
+                <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"></path>
+              </svg>
+            </div>
+            <h3 class="text-xl font-bold text-white mb-2">Email Us</h3>
+            <a href="mailto:Antonio@alwaystruckingandloading.com" class="text-sm sm:text-lg text-blue-300 hover:text-blue-400 transition-colors block mb-2 bg-black/30 px-2 sm:px-3 py-2 rounded-lg mx-auto max-w-xs break-all font-medium">Antonio@alwaystruckingandloading.com</a>
+            <p class="text-sm text-gray-400">Quick response guaranteed</p>
+          </div>
+          
+          <div class="card-style rounded-xl p-6 text-center">
+            <div class="bg-red-600 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+              <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path>
+              </svg>
+            </div>
+            <h3 class="text-xl font-bold text-white mb-2">Based In</h3>
+            <p class="text-lg text-gray-300 mb-2">Milwaukee, Wisconsin</p>
+            <p class="text-sm text-gray-400">Serving all 48 states</p>
+          </div>
+        </div>
+        
+        <!-- Contact Action Buttons -->
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+          <button id="save-contact-footer" class="bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-8 rounded-lg transition-all transform hover:scale-105 shadow-lg">
+            💾 Save Contact Info
+          </button>
+          <a href="tel:18003626564" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-lg transition-all transform hover:scale-105 shadow-lg">
+            📞 Call Now
+          </a>
+          <a href="mailto:Antonio@alwaystruckingandloading.com?subject=Transportation Quote Request" class="bg-green-700 hover:bg-green-800 text-white font-bold py-4 px-8 rounded-lg transition-all transform hover:scale-105 shadow-lg">
+            ✉️ Send Email
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="bg-black py-8 border-t border-gray-800">
+    <div class="container mx-auto px-4">
+      <div class="flex flex-col md:flex-row justify-between items-center">
+        <div class="flex items-center space-x-3 mb-4 md:mb-0">
+          <a href="https://alwaystruckingandloading.com" target="_blank" class="flex items-center space-x-3">
+            <img src="onbfvyra4s.png" alt="Always Trucking & Loading" class="h-10 w-10 rounded-full hover:scale-105 transition-transform">
+            <div>
+              <p class="text-white font-semibold hover:text-gray-300 transition-colors">Always Trucking & Loading LLC</p>
+              <p class="text-gray-400 text-sm">Professional Transportation Since 2019</p>
+            </div>
+          </a>
+        </div>
+        <div class="text-center md:text-right">
+          <p class="text-gray-400 text-sm">© 2024 Always Trucking & Loading LLC</p>
+          <p class="text-gray-500 text-xs">Equal Opportunity Employer</p>
+          <a href="mailto:Antonio@alwaystruckingandloading.com" class="text-blue-500 hover:text-blue-400 text-xs mt-1 block">Antonio@alwaystruckingandloading.com</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Agent Lee Modal -->
+  <div id="agent-wrapper" class="fixed inset-0 bg-black/80 z-50 hidden flex items-center justify-center p-4">
+    <div class="card-style rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+      <div class="flex items-center justify-between p-6 border-b border-gray-700">
+        <div class="flex items-center space-x-4">
+          <img src="1laejwfqkz.png" alt="Agent Lee" class="w-16 h-16 rounded-full">
+          <div>
+            <h3 class="text-xl font-bold text-white">Agent Lee</h3>
+            <p class="text-blue-300">Always Trucking & Loading Specialist</p>
+          </div>
+        </div>
+        <button id="close-agent" class="text-gray-400 hover:text-white p-2 rounded-full hover:bg-gray-700 transition-colors">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+      
+      <div class="p-6 overflow-y-auto max-h-[70vh]">
+        <div class="bg-gray-800/50 rounded-lg p-4 mb-6">
+          <p class="text-white mb-2">Hello! I'm Agent Lee, part of the Always Trucking & Loading team, and I'm your digital guide for navigating our website experience.</p>
+          <p class="text-gray-300 mb-2">Welcome to our digital business card and service hub! I'm here to help you discover everything we offer - from our transportation services to easy ways to contact Antonio directly.</p>
+          <p class="text-gray-300 mb-2">You can click our company logo anytime to learn more about Always Trucking & Loading, use the "Save Contact" button to add Antonio's information to your phone, or reach out instantly via phone or email.</p>
+          <p class="text-gray-300">Let me guide you through our services and show you how to get the most out of your visit to our digital business card!</p>
+        </div>
+        
+        <div class="grid grid-cols-2 gap-4 mb-6">
+          <button class="agent-nav-btn bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-lg transition-colors" data-section="services">
+            <span class="text-2xl">🚚</span>
+            <span class="block mt-2 font-medium">Our Services</span>
+          </button>
+          <button class="agent-nav-btn bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-lg transition-colors" data-section="locations">
+            <span class="text-2xl">🗺️</span>
+            <span class="block mt-2 font-medium">Service Areas</span>
+          </button>
+          <button class="agent-nav-btn bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-lg transition-colors" data-section="fleet">
+            <span class="text-2xl">🚛</span>
+            <span class="block mt-2 font-medium">Our Fleet</span>
+          </button>
+          <button class="agent-nav-btn bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-lg transition-colors" data-section="contact">
+            <span class="text-2xl">📞</span>
+            <span class="block mt-2 font-medium">Contact Us</span>
+          </button>
+        </div>
+        
+        <div class="space-y-4">
+          <h4 class="text-xl font-bold text-blue-300 text-center">Frequently Asked Questions</h4>
+          
+          <div class="faq-item bg-gray-800/50 rounded-lg p-4">
+            <button class="faq-question w-full text-left text-white font-medium flex justify-between items-center">
+              How can I learn about Always Trucking & Loading's services?
+              <span class="text-2xl">+</span>
+            </button>
+            <div class="faq-answer hidden mt-3 text-gray-300 text-sm border-t border-gray-600 pt-3">
+              Our "Services" section showcases everything we offer in an easy-to-read grid format. Scroll down to discover our expertise in heavy haul transport, construction materials delivery, commercial freight, emergency transport, plus our nationwide coverage and full insurance protection. Each service is designed to meet your specific transportation needs!
+            </div>
+          </div>
+          
+          <div class="faq-item bg-gray-800/50 rounded-lg p-4">
+            <button class="faq-question w-full text-left text-white font-medium flex justify-between items-center">
+              How can I contact Always Trucking & Loading?
+              <span class="text-2xl">+</span>
+            </button>
+            <div class="faq-answer hidden mt-3 text-gray-300 text-sm border-t border-gray-600 pt-3">
+              We've made it super easy to reach us! Antonio's contact information is right at the top - call us at 1-800-362-6564 or email Antonio directly. There's also a complete "Get In Touch" section at the bottom with all our contact options. Plus, you can use the "Save Contact" button to add Antonio's information directly to your phone!
+            </div>
+          </div>
+          
+          <div class="faq-item bg-gray-800/50 rounded-lg p-4">
+            <button class="faq-question w-full text-left text-white font-medium flex justify-between items-center">
+              What's the best way to get a quote or start working together?
+              <span class="text-2xl">+</span>
+            </button>
+            <div class="faq-answer hidden mt-3 text-gray-300 text-sm border-t border-gray-600 pt-3">
+              We've made connecting with Antonio super simple! Just click his phone number 1-800-362-6564 for immediate assistance, or click the email address to send a message. Our "Call Now" and "Send Email" buttons even include pre-filled subject lines for quote requests. We're here to help with your transportation needs right away!
+            </div>
+          </div>
+          
+          <div class="faq-item bg-gray-800/50 rounded-lg p-4">
+            <button class="faq-question w-full text-left text-white font-medium flex justify-between items-center">
+              What can you tell me about Always Trucking & Loading's fleet?
+              <span class="text-2xl">+</span>
+            </button>
+            <div class="faq-answer hidden mt-3 text-gray-300 text-sm border-t border-gray-600 pt-3">
+              I'm proud to show you our "Professional Fleet" section! You'll see our impressive trucks against the beautiful Milwaukee city skyline. We've been maintaining our modern semis, flatbeds, and specialized equipment transporters since 2019, ensuring every delivery is safe and reliable. Our fleet represents our commitment to professional service!
+            </div>
+          </div>
+          
+          <div class="faq-item bg-gray-800/50 rounded-lg p-4">
+            <button class="faq-question w-full text-left text-white font-medium flex justify-between items-center">
+              Tell me about Always Trucking & Loading as a company
+              <span class="text-2xl">+</span>
+            </button>
+            <div class="faq-answer hidden mt-3 text-gray-300 text-sm border-t border-gray-600 pt-3">
+              I'm happy to share! We've been serving customers since 2019 from our Milwaukee, Wisconsin base. Our "About" section shows our licensing and insurance credentials, plus our commitment to reliable service. You can click our company logo anywhere on the site to learn even more about our story and values. We're proud of what we've built!
+            </div>
+          </div>
+          
+          <div class="faq-item bg-gray-800/50 rounded-lg p-4">
+            <button class="faq-question w-full text-left text-white font-medium flex justify-between items-center">
+              Can I use this website on my phone or tablet?
+              <span class="text-2xl">+</span>
+            </button>
+            <div class="faq-answer hidden mt-3 text-gray-300 text-sm border-t border-gray-600 pt-3">
+              Absolutely! We designed our digital business card to work perfectly on any device. On your phone, just tap Antonio's number to call us directly, tap the email to message us, or use the "Save Contact" button to add his info to your phone. Everything adapts beautifully whether you're on a phone, tablet, or computer!
+            </div>
+          </div>
+          
+          <div class="faq-item bg-gray-800/50 rounded-lg p-4">
+            <button class="faq-question w-full text-left text-white font-medium flex justify-between items-center">
+              Why did Always Trucking & Loading create this digital experience?
+              <span class="text-2xl">+</span>
+            </button>
+            <div class="faq-answer hidden mt-3 text-gray-300 text-sm border-t border-gray-600 pt-3">
+              We wanted to give you so much more than a paper business card! Our digital business card offers instant calling, easy email contact, downloadable contact info, complete service details, professional fleet photos, and me - your personal guide. It's available 24/7 and gives you everything you need to understand our services and connect with us immediately!
+            </div>
+          </div>
+          
+          <div class="faq-item bg-gray-800/50 rounded-lg p-4">
+            <button class="faq-question w-full text-left text-white font-medium flex justify-between items-center">
+              How should I explore this website?
+              <span class="text-2xl">+</span>
+            </button>
+            <div class="faq-answer hidden mt-3 text-gray-300 text-sm border-t border-gray-600 pt-3">
+              Let me guide you through our journey! Start with Antonio's contact information at the top, then scroll down to discover our Services, check out our Professional Fleet, learn About our company, and finish with our Contact section. You can also use the navigation buttons I provide to jump directly to any section. I'm here to help you explore everything we offer!
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
-</div>
-<script src="js/script.js"></script>
-<script src="js/agent-lee.js"></script>
+
+  <script>
+    // DOM Elements
+    const saveContactBtns = document.querySelectorAll('#save-contact, #save-contact-footer');
+    const showAgentBtn = document.getElementById('show-agent');
+    const agentWrapper = document.getElementById('agent-wrapper');
+    const closeAgentBtn = document.getElementById('close-agent');
+    const faqQuestions = document.querySelectorAll('.faq-question');
+    const agentNavBtns = document.querySelectorAll('.agent-nav-btn');
+
+    // Save Contact functionality
+    saveContactBtns.forEach(btn => {
+      btn.addEventListener('click', function() {
+        const contact = {
+          name: "Antonio",
+          phoneNumbers: [
+            { type: "work", number: "1-800-362-6564" }
+          ],
+          email: "Antonio@alwaystruckingandloading.com"
+        };
+        
+        const vcard = createVCard(contact);
+        const blob = new Blob([vcard], { type: "text/vcard" });
+        const url = URL.createObjectURL(blob);
+        
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = "antonio_contact.vcf";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      });
+    });
+
+    // Agent Lee Modal
+    showAgentBtn.addEventListener('click', function() {
+      agentWrapper.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+      
+      // Trigger Agent Lee's introduction and narration
+      startAgentLeeIntroduction();
+    });
+
+    closeAgentBtn.addEventListener('click', function() {
+      agentWrapper.classList.add('hidden');
+      document.body.style.overflow = 'auto';
+    });
+
+    agentWrapper.addEventListener('click', function(e) {
+      if (e.target === agentWrapper) {
+        agentWrapper.classList.add('hidden');
+        document.body.style.overflow = 'auto';
+      }
+    });
+
+    // FAQ functionality
+    faqQuestions.forEach(question => {
+      question.addEventListener('click', function() {
+        const answer = this.nextElementSibling;
+        const isOpen = !answer.classList.contains('hidden');
+        
+        // Close all other FAQs
+        faqQuestions.forEach(q => {
+          q.nextElementSibling.classList.add('hidden');
+          q.querySelector('span').textContent = '+';
+        });
+        
+        // Toggle current FAQ
+        if (!isOpen) {
+          answer.classList.remove('hidden');
+          this.querySelector('span').textContent = '-';
+          
+          // Read the question and answer aloud
+          const questionText = this.textContent.trim().replace(/\+|\-/g, '');
+          const answerText = answer.querySelector('p').textContent.trim();
+          
+          // Speak the question and answer
+          speakText(questionText + ". " + answerText);
+        }
+      });
+    });
+
+    // Agent navigation buttons
+    agentNavBtns.forEach(btn => {
+      btn.addEventListener('click', function() {
+        const section = this.getAttribute('data-section');
+        
+        // Announce the section change
+        let sectionIntro = "";
+        switch(section) {
+          case 'services':
+            sectionIntro = "Let me tell you about all the transportation services we offer at Always Trucking and Loading.";
+            break;
+          case 'locations':
+            sectionIntro = "Here are all the ways you can connect with our team and Antonio directly.";
+            break;
+          case 'fleet':
+            sectionIntro = "I'm excited to show you our professional fleet and what makes us reliable since 2019.";
+            break;
+          case 'contact':
+            sectionIntro = "Let me help you get in touch with Antonio and our team for your transportation needs.";
+            break;
+        }
+        
+        // Speak the section introduction
+        if (sectionIntro) {
+          speakText(sectionIntro);
+        }
+        
+        let sectionFAQs = [];
+        
+        switch(section) {
+          case 'services':
+            sectionFAQs = ['How can I learn about Always Trucking & Loading\'s services?', 
+                           'Can I use this website on my phone or tablet?',
+                           'Why did Always Trucking & Loading create this digital experience?'];
+            break;
+          case 'locations':
+            sectionFAQs = ['How can I contact Always Trucking & Loading?'];
+            break;
+          case 'fleet':
+            sectionFAQs = ['What can you tell me about Always Trucking & Loading\'s fleet?',
+                           'How should I explore this website?'];
+            break;
+          case 'contact':
+            sectionFAQs = ['What\'s the best way to get a quote or start working together?',
+                           'Tell me about Always Trucking & Loading as a company'];
+            break;
+        }
+        
+        // Close all FAQs first
+        faqQuestions.forEach(question => {
+          question.nextElementSibling.classList.add('hidden');
+          question.querySelector('span').textContent = '+';
+        });
+        
+        // Open matching FAQs
+        faqQuestions.forEach(question => {
+          const questionText = question.textContent;
+          const answer = question.nextElementSibling;
+          
+          if (sectionFAQs.some(faq => questionText.includes(faq))) {
+            answer.classList.remove('hidden');
+            question.querySelector('span').textContent = '-';
+            
+            if (questionText.includes(sectionFAQs[0])) {
+              question.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          }
+        });
+      });
+    });
+
+    // Smooth scrolling for anchor links
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+          target.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+          });
+        }
+      });
+    });
+
+    // Speech functions for Agent Lee
+    function speakText(text, callback) {
+      if ('speechSynthesis' in window) {
+        // Cancel any ongoing speech
+        window.speechSynthesis.cancel();
+        
+        const utterance = new SpeechSynthesisUtterance(text);
+        
+        // Set voice properties
+        utterance.volume = 1;
+        utterance.rate = 1;
+        utterance.pitch = 1;
+        
+        // Try to get a male voice if available
+        let voices = window.speechSynthesis.getVoices();
+        if (voices.length > 0) {
+          // Wait for voices to load if they haven't yet
+          if (voices.length === 0) {
+            window.speechSynthesis.onvoiceschanged = function() {
+              voices = window.speechSynthesis.getVoices();
+              setVoice();
+            };
+          } else {
+            setVoice();
+          }
+          
+          function setVoice() {
+            // Try to find a male English voice
+            const maleVoice = voices.find(voice => 
+              (voice.name.includes('Male') || voice.name.includes('male')) && 
+              voice.lang.includes('en')
+            );
+            
+            if (maleVoice) {
+              utterance.voice = maleVoice;
+            }
+          }
+        }
+        
+        // Add callback if provided
+        if (callback) {
+          utterance.onend = callback;
+        }
+        
+        // Speak the text
+        window.speechSynthesis.speak(utterance);
+      }
+    }
+    
+    // Agent Lee introduction sequence
+    function startAgentLeeIntroduction() {
+      // First introduction
+      const introduction = "Hello! I'm Agent Lee, part of the Always Trucking and Loading team, and I'm your digital guide for this website experience.";
+      speakText(introduction, function() {
+        // After introduction, explain the website purpose
+        setTimeout(function() {
+          const explanation = "Welcome to our digital business card and service hub! I'm here to help you discover our transportation services and connect with Antonio easily.";
+          speakText(explanation, function() {
+            // After explanation, suggest an action
+            setTimeout(function() {
+              const suggestion = "You can click our company logo to learn more about us, save Antonio's contact information, or reach out directly. Let me guide you through everything we offer!";
+              speakText(suggestion);
+            }, 500);
+          });
+        }, 500);
+      });
+    }
+    
+    // Function to create vCard format
+    function createVCard(contact) {
+      let vcard = "BEGIN:VCARD\n";
+      vcard += "VERSION:3.0\n";
+      vcard += `FN:${contact.name}\n`;
+      vcard += `N:${contact.name};;;\n`;
+      
+      contact.phoneNumbers.forEach(phone => {
+        vcard += `TEL;TYPE=${phone.type.toUpperCase()}:${phone.number}\n`;
+      });
+      
+      vcard += `EMAIL:${contact.email}\n`;
+      vcard += `URL:https://alwaystruckingandloading.com\n`;
+      vcard += `ORG:Always Trucking and Loading LLC\n`;
+      vcard += "END:VCARD";
+      
+      return vcard;
+    }
+
+    // Animation on scroll
+    const observerOptions = {
+      threshold: 0.1,
+      rootMargin: '0px 0px -50px 0px'
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.style.animationDelay = '0.2s';
+          entry.target.style.animationFillMode = 'both';
+        }
+      });
+    }, observerOptions);
+
+    // Observe elements for animation
+    document.querySelectorAll('.slide-in-left, .slide-in-right, .fade-in').forEach(el => {
+      observer.observe(el);
+    });
+  </script>
 </body>
 </html>

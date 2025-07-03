@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agent Card Demo</title>
+  <style>
+    /* Basic Reset */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      background-color: #f5f5f5;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    
+    /* Agent Card Styles */
+    #agent-card {
+      width: 320px;
+      background-color: #1e293b;
+      color: white;
+      border-radius: 16px;
+      border: 4px solid #3b82f6;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+      position: absolute;
+      top: 50px;
+      left: 50px;
+      padding: 16px;
+      z-index: 1000;
+    }
+    
+    /* Card Header */
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: move;
+      margin-bottom: 16px;
+    }
+    
+    .avatar {
+      width: 48px;
+      height: 48px;
+      background-color: #64748b;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 24px;
+      border: 2px solid #93c5fd;
+    }
+    
+    .agent-details h3 {
+      color: #93c5fd;
+      font-size: 18px;
+      margin-bottom: 4px;
+    }
+    
+    .agent-details p {
+      color: #bfdbfe;
+      font-size: 14px;
+    }
+    
+    /* Navigation Grid */
+    .navigation-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    
+    .nav-button {
+      background-color: #334155;
+      border: none;
+      color: white;
+      padding: 8px 4px;
+      text-align: center;
+      text-decoration: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    
+    .nav-button:hover {
+      background-color: #475569;
+    }
+    
+    .nav-button span {
+      font-size: 16px;
+      margin-bottom: 4px;
+      color: #60a5fa;
+    }
+    
+    /* Chat Area */
+    .chat-area {
+      height: 144px;
+      background-color: #334155;
+      border-radius: 8px;
+      padding: 8px;
+      margin-bottom: 8px;
+      overflow-y: auto;
+    }
+    
+    .message {
+      padding: 8px;
+      margin-bottom: 8px;
+      border-radius: 8px;
+    }
+    
+    .user-message {
+      background-color: #475569;
+      margin-left: 16px;
+    }
+    
+    .agent-message {
+      background-color: #3b82f6;
+      margin-right: 16px;
+    }
+    
+    .empty-chat {
+      color: #94a3b8;
+      text-align: center;
+      font-style: italic;
+      margin-top: 48px;
+    }
+    
+    /* Message Input */
+    .message-input {
+      width: 100%;
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid #475569;
+      background-color: #475569;
+      color: white;
+      resize: none;
+      margin-bottom: 12px;
+    }
+    
+    .message-input::placeholder {
+      color: #94a3b8;
+    }
+    
+    /* Control Buttons */
+    .control-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    
+    .control-button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 4px;
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    
+    .send-btn { background-color: #2563eb; }
+    .send-btn:hover { background-color: #3b82f6; }
+    
+    .listen-btn { background-color: #16a34a; }
+    .listen-btn:hover { background-color: #22c55e; }
+    
+    .stop-btn { background-color: #dc2626; }
+    .stop-btn:hover { background-color: #ef4444; }
+    
+    .finish-btn { background-color: #ca8a04; }
+    .finish-btn:hover { background-color: #eab308; }
+    
+    .email-btn { background-color: #4f46e5; }
+    .email-btn:hover { background-color: #6366f1; }
+    
+    .phone-btn { background-color: #0d9488; }
+    .phone-btn:hover { background-color: #14b8a6; }
+    
+    .chat-btn { background-color: #3b82f6; }
+    .chat-btn:hover { background-color: #60a5fa; }
+    
+    .mouse-btn { background-color: #9333ea; }
+    .mouse-btn:hover { background-color: #a855f7; }
+    
+    /* Icons for buttons */
+    .icon {
+      margin-right: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div id="agent-card" role="dialog" aria-modal="true" aria-labelledby="agent-card-title" aria-describedby="agent-card-description">
+    <!-- Card Header -->
+    <div class="card-header" id="drag-handle">
+      <div class="avatar" aria-hidden="true">👤</div>
+      <div class="agent-details">
+        <h3 id="agent-card-title">Agent Lee</h3>
+        <p id="agent-card-description">Your AI Web Guide</p>
+      </div>
+    </div>
+    
+    <!-- Navigation Grid -->
+    <div class="navigation-grid" role="navigation" aria-label="Agent Lee Quick Navigation">
+      <button class="nav-button" data-section="Home">
+        <span aria-hidden="true">🏠</span>
+        Home
+      </button>
+      <button class="nav-button" data-section="About">
+        <span aria-hidden="true">📄</span>
+        About
+      </button>
+      <button class="nav-button" data-section="Solutions">
+        <span aria-hidden="true">💡</span>
+        Solutions
+      </button>
+      <button class="nav-button" data-section="Portfolio">
+        <span aria-hidden="true">💻</span>
+        Portfolio
+      </button>
+      <button class="nav-button" data-section="Process">
+        <span aria-hidden="true">📈</span>
+        Process
+      </button>
+      <button class="nav-button" data-section="Testimonials">
+        <span aria-hidden="true">💬</span>
+        Testimonials
+      </button>
+    </div>
+    
+    <!-- Chat Area -->
+    <div class="chat-area" id="chat-messages" role="log" aria-live="polite">
+      <div class="empty-chat" id="empty-message">
+        Send a message or click a navigation button
+      </div>
+      <!-- Messages will be added here dynamically -->
+    </div>
+    
+    <!-- Message Input -->
+    <textarea 
+      class="message-input" 
+      id="message-input" 
+      rows="2" 
+      placeholder="Type your message..."
+      aria-label="Message to Agent Lee"></textarea>
+    
+    <!-- Control Buttons - First Row -->
+    <div class="control-row" role="toolbar" aria-label="Chat Controls">
+      <button class="control-button send-btn" id="send-button" aria-label="Send Message">
+        <span class="icon" aria-hidden="true">✉️</span> Send
+      </button>
+      <button class="control-button listen-btn" aria-label="Listen for Voice Input">
+        <span class="icon" aria-hidden="true">🎤</span> Listen
+      </button>
+      <button class="control-button stop-btn" aria-label="Stop Listening or Speaking">
+        <span class="icon" aria-hidden="true">⏹️</span> Stop
+      </button>
+      <button class="control-button finish-btn" aria-label="Finish Interaction">
+        <span class="icon" aria-hidden="true">✅</span> Finish
+      </button>
+    </div>
+    
+    <!-- Control Buttons - Second Row -->
+    <div class="control-row" role="toolbar" aria-label="Action Controls">
+      <button class="control-button email-btn" aria-label="Email Transcript or Help">
+        <span class="icon" aria-hidden="true">📧</span> Email
+      </button>
+      <button class="control-button phone-btn" aria-label="Call Support">
+        <span class="icon" aria-hidden="true">📱</span> Phone
+      </button>
+      <button class="control-button chat-btn" aria-label="Open Main Chat Window">
+        <span class="icon" aria-hidden="true">💬</span> Chat
+      </button>
+      <button class="control-button mouse-btn" aria-label="Request Mouse Control (Remote Assistance)">
+        <span class="icon" aria-hidden="true">🖱️</span> Mouse
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // Get DOM elements
+    const agentCard = document.getElementById('agent-card');
+    const dragHandle = document.getElementById('drag-handle');
+    const chatMessages = document.getElementById('chat-messages');
+    const emptyMessage = document.getElementById('empty-message');
+    const messageInput = document.getElementById('message-input');
+    const sendButton = document.getElementById('send-button');
+    const navButtons = document.querySelectorAll('.nav-button');
+    
+    // Drag functionality
+    let isDragging = false;
+    let offsetX, offsetY;
+    
+    dragHandle.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      const rect = agentCard.getBoundingClientRect();
+      offsetX = e.clientX - rect.left;
+      offsetY = e.clientY - rect.top;
+      agentCard.style.cursor = 'grabbing';
+    });
+    
+    document.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      
+      agentCard.style.left = `${e.clientX - offsetX}px`;
+      agentCard.style.top = `${e.clientY - offsetY}px`;
+    });
+    
+    document.addEventListener('mouseup', () => {
+      isDragging = false;
+      agentCard.style.cursor = 'default';
+    });
+    
+    // Chat functionality
+    function addMessage(text, sender) {
+      // Hide empty message if this is the first message
+      if (emptyMessage) {
+        emptyMessage.style.display = 'none';
+      }
+      
+      const messageElement = document.createElement('div');
+      messageElement.classList.add('message');
+      messageElement.classList.add(sender === 'user' ? 'user-message' : 'agent-message');
+      messageElement.textContent = text;
+      
+      chatMessages.appendChild(messageElement);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+    
+    function sendMessage() {
+      const message = messageInput.value.trim();
+      if (!message) return;
+      
+      // Add user message
+      addMessage(message, 'user');
+      messageInput.value = '';
+      
+      // Simulate agent response after 1 second
+      setTimeout(() => {
+        const response = "I can help you navigate this website. What section would you like to visit?";
+        addMessage(response, 'agent');
+      }, 1000);
+    }
+    
+    // Send message on button click
+    sendButton.addEventListener('click', sendMessage);
+    
+    // Send message on Enter key (without Shift)
+    messageInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+    
+    // Navigation button click handlers
+    navButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        const section = button.getAttribute('data-section');
+        
+        // Add user message
+        addMessage(`I'd like to go to the ${section} section.`, 'user');
+        
+        // Simulate agent response after 1 second
+        setTimeout(() => {
+          const responses = {
+            "Home": "Taking you to the Home section. You can find an overview of our services there.",
+            "About": "The About section has our company history and team information. Let me know if you have questions!",
+            "Solutions": "Our Solutions section showcases how we can help your business. What specific solution interests you?",
+            "Portfolio": "The Portfolio shows our past work. Would you like to see a specific project?",
+            "Process": "Our Process section explains how we work with clients. Is there a specific stage you want to know about?",
+            "Testimonials": "The Testimonials section has feedback from our clients. Would you like me to highlight any specific ones?"
+          };
+          
+          addMessage(responses[section] || "I'll help you navigate to that section.", 'agent');
+        }, 1000);
+      });
+    });
+  </script>
+</body>
+</html>
